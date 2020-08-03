@@ -25,9 +25,13 @@ public:
 	void OnStartMouseOver() override;
 	void OnEndMouseOver() override;
 	void OnInteract(ARPGCharacterBase* PlayerCharacter) override;
+	void StartDialogueWithPlayer();
 
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
 		void SetAffiliationStatus(EProtagonistAffiliation val);
+
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+		virtual EProtagonistAffiliation GetObjectAffiliation() override;
 
 protected:
 

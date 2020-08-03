@@ -29,6 +29,11 @@ TSubclassOf<URPGGameplayAbility> UInventoryComponent::GetAbilityFromHotkey(EComb
 	return *CombatMap.Find(GetCombatHotkeyHash(InHotkey));
 }
 
+AWeaponActorBase* UInventoryComponent::GetCurrentWeapon()
+{
+	return CurrentWeapon;
+}
+
 void UInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();

@@ -47,6 +47,8 @@ protected:
 		FRPGItemSlot Slot;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 		URPGItem* RPGWeaponItem;
+	UPROPERTY(EditDefaultsOnly)
+		float Range;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Defaults")
 		FGameplayTag AttackEventTag;
@@ -67,4 +69,5 @@ public:
 	void SetSlot(FRPGItemSlot val) { Slot = val; }
 	URPGItem* GetWeaponItem() const { return RPGWeaponItem; }
 	void SetWeaponItem(URPGItem* val) { RPGWeaponItem = val; }
+	float GetRange() { return Range; }
 };

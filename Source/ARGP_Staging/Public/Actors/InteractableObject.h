@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
+#include "Types/RPGTypes.h"
 #include "InteractableObject.generated.h"
 
 // This class does not need to be modified.
@@ -26,4 +27,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 		virtual void OnStartMouseOver() = 0;
+
+	UFUNCTION(BlueprintCallable)
+		virtual EProtagonistAffiliation GetObjectAffiliation() = 0;
 };

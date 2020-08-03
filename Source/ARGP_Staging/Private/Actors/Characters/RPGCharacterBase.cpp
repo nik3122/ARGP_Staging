@@ -89,6 +89,140 @@ bool ARPGCharacterBase::SetCharacterLevel(int32 NewLevel)
 	return false;
 }
 
+void ARPGCharacterBase::GiveAbilityAndAddToInventory(ECombatHotkeys InHotkey, TSubclassOf<URPGGameplayAbility> AbilityClass)
+{
+	if (AbilitySystemComponent) {
+		AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilityClass));
+		InventoryComponent->AddAbilityToCombatMap(ECombatHotkeys::DEFAULT_ATTACK, AbilityClass);
+	}
+}
+
+void ARPGCharacterBase::ActivateAbilityByClass(TSubclassOf<URPGGameplayAbility> AbilityClass)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Activate by Class"));
+	if (AbilitySystemComponent) {
+		AbilitySystemComponent->TryActivateAbilityByClass(AbilityClass, true);
+	}
+}
+
+void ARPGCharacterBase::GetActiveAbilitiesWithTags(FGameplayTagContainer AbilityTags, TArray<URPGGameplayAbility*>& ActiveAbilities)
+{
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->GetActiveAbilitiesWithTags(AbilityTags, ActiveAbilities);
+	}
+}
+
+bool ARPGCharacterBase::CanUseAnyAbility()
+{
+	return IsAlive() && !UGameplayStatics::IsGamePaused(this) && !IsUsingSkill();
+}
+
+bool ARPGCharacterBase::WasHitFromFront(const FVector& ImpactPoint)
+{
+	const FVector& ActorLocation = GetActorLocation();
+	float DistanceToFrontBackPlane = FVector::PointPlaneDist(ImpactPoint, ActorLocation, GetActorRightVector());
+	float DistanceToRightLeftPlane = FVector::PointPlaneDist(ImpactPoint, ActorLocation, GetActorForwardVector());
+
+
+	if (FMath::Abs(DistanceToFrontBackPlane) <= FMath::Abs(DistanceToRightLeftPlane))
+	{
+		if (DistanceToRightLeftPlane >= 0)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+	/*
+	else
+	{
+		// Determine if Right or Left
+
+		if (DistanceToFrontBackPlane >= 0)
+		{
+			return EGDHitReactDirection::Right;
+		}
+		else
+		{
+			return EGDHitReactDirection::Left;
+		}
+	}
+	*/
+	return true;
+}
+
+bool ARPGCharacterBase::IsPlayingHighPriorityMontage()
+{
+	return GetMesh()->GetAnimInstance()->Montage_IsPlaying(HighPriorityMontage);
+}
+
+void ARPGCharacterBase::PlayHighPriorityMontage(UAnimMontage* InMontage, FName StartSectionName)
+{
+	if (!GetMesh()->GetAnimInstance()->Montage_IsPlaying(InMontage)) {
+		HighPriorityMontage = InMontage;
+		PlayAnimMontage(HighPriorityMontage, 1.f, StartSectionName);
+	}
+}
+
+void ARPGCharacterBase::DelayedDestroy()
+{
+	GetWorld()->DestroyActor(this);
+}
+
+void ARPGCharacterBase::Die()
+{
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetCharacterMovement()->GravityScale = 0;
+	GetCharacterMovement()->Velocity = FVector(0);
+
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->CancelAllAbilities();
+	}
+
+	if (Animations.DeathMontage)
+	{
+		float AnimDuration = PlayAnimMontage(Animations.DeathMontage);
+		if (GetLocalRole() < ROLE_Authority)
+			return;
+		FTimerHandle DeathTimer;
+		GetWorldTimerManager().SetTimer(DeathTimer, this, &ARPGCharacterBase::DelayedDestroy, AnimDuration - .25, false);
+	}
+	else
+	{
+		if (GetLocalRole() < ROLE_Authority)
+			return;
+		DelayedDestroy();
+	}
+}
+
+bool ARPGCharacterBase::SetupDefaultAttributes()
+{
+	if (!AbilitySystemComponent)
+	{
+		return false;
+	}
+
+	if (!DefaultAttributes)
+	{
+		return false;
+	}
+
+	FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
+	EffectContext.AddSourceObject(this);
+
+	FGameplayEffectSpecHandle NewHandle = AbilitySystemComponent->MakeOutgoingSpec(DefaultAttributes, 1.0f, EffectContext);
+	if (NewHandle.IsValid())
+	{
+		FActiveGameplayEffectHandle ActiveGEHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToTarget(*NewHandle.Data.Get(), AbilitySystemComponent);
+		return true;
+	}
+	return false;
+}
+
 bool ARPGCharacterBase::ModifyIntValue_Implementation(const FName ValueName, bool bDelta, int32 Value)
 {
 	if (!CharDialogueData.Integers.Contains(ValueName))
@@ -157,104 +291,6 @@ bool ARPGCharacterBase::GetBoolValue_Implementation(const FName ValueName) const
 FName ARPGCharacterBase::GetNameValue_Implementation(const FName ValueName) const
 {
 	return CharDialogueData.Names.Contains(ValueName) ? CharDialogueData.Names[ValueName] : NAME_None;
-}
-
-void ARPGCharacterBase::GiveAbilityAndAddToInventory(ECombatHotkeys InHotkey, TSubclassOf<URPGGameplayAbility> AbilityClass)
-{
-	if (AbilitySystemComponent) {
-		AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilityClass));
-		InventoryComponent->AddAbilityToCombatMap(ECombatHotkeys::DEFAULT_ATTACK, AbilityClass);
-	}
-}
-
-void ARPGCharacterBase::ActivateAbilityByClass(TSubclassOf<URPGGameplayAbility> AbilityClass)
-{
-	UE_LOG(LogTemp, Warning, TEXT("Activate by Class"));
-	if (AbilitySystemComponent) {
-		AbilitySystemComponent->TryActivateAbilityByClass(AbilityClass, true);
-	}
-}
-
-void ARPGCharacterBase::GetActiveAbilitiesWithTags(FGameplayTagContainer AbilityTags, TArray<URPGGameplayAbility*>& ActiveAbilities)
-{
-	if (AbilitySystemComponent)
-	{
-		AbilitySystemComponent->GetActiveAbilitiesWithTags(AbilityTags, ActiveAbilities);
-	}
-}
-
-bool ARPGCharacterBase::CanUseAnyAbility()
-{
-	return IsAlive() && !UGameplayStatics::IsGamePaused(this) && !IsUsingSkill();
-}
-
-bool ARPGCharacterBase::IsPlayingHighPriorityMontage()
-{
-	return GetMesh()->GetAnimInstance()->Montage_IsPlaying(HighPriorityMontage);
-}
-
-void ARPGCharacterBase::PlayHighPriorityMontage(UAnimMontage* InMontage, FName StartSectionName)
-{
-	if (!GetMesh()->GetAnimInstance()->Montage_IsPlaying(InMontage)) {
-		HighPriorityMontage = InMontage;
-		PlayAnimMontage(HighPriorityMontage, 1.f, StartSectionName);
-	}
-}
-
-void ARPGCharacterBase::DelayedDestroy()
-{
-	GetWorld()->DestroyActor(this);
-}
-
-void ARPGCharacterBase::Die()
-{
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	GetCharacterMovement()->GravityScale = 0;
-	GetCharacterMovement()->Velocity = FVector(0);
-
-	if (AbilitySystemComponent)
-	{
-		AbilitySystemComponent->CancelAllAbilities();
-	}
-
-	if (DeathMontage)
-	{
-		float AnimDuration = PlayAnimMontage(DeathMontage);
-		if (GetLocalRole() < ROLE_Authority)
-			return;
-		FTimerHandle DeathTimer;
-		GetWorldTimerManager().SetTimer(DeathTimer, this, &ARPGCharacterBase::DelayedDestroy, AnimDuration - .25, false);
-	}
-	else
-	{
-		if (GetLocalRole() < ROLE_Authority)
-			return;
-		DelayedDestroy();
-	}
-}
-
-bool ARPGCharacterBase::SetupDefaultAttributes()
-{
-	if (!AbilitySystemComponent)
-	{
-		return false;
-	}
-
-	if (!DefaultAttributes)
-	{
-		return false;
-	}
-
-	FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
-	EffectContext.AddSourceObject(this);
-
-	FGameplayEffectSpecHandle NewHandle = AbilitySystemComponent->MakeOutgoingSpec(DefaultAttributes, 1.0f, EffectContext);
-	if (NewHandle.IsValid())
-	{
-		FActiveGameplayEffectHandle ActiveGEHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToTarget(*NewHandle.Data.Get(), AbilitySystemComponent);
-		return true;
-	}
-	return false;
 }
 
 void ARPGCharacterBase::HandleDamage(float DamageAmount, const FHitResult& HitInfo, const struct FGameplayTagContainer& DamageTags, ARPGCharacterBase* InstigatorPawn, AActor* DamageCauser)

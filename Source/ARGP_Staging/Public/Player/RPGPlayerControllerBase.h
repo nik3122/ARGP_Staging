@@ -107,6 +107,7 @@ private:
 	bool bIsCursorOverValidActor;
 	bool bInteractionClicked;
 
+	const float TARGET_REACHED_DISTANCE = 120.f;
 	const float MIN_DISTANCE = 80.f;
 
 	UDlgContext* CurrentDialogueContext;

@@ -10,7 +10,9 @@
 #include "Blueprint/UserWidget.h"
 #include "Game/RPGGameInstanceBase.h"
 #include "Actors/Characters/RPGCharacterBase.h"
+#include "Actors/Weapons/WeaponActorBase.h"
 #include "Actors/Characters/AICharacter.h"
+#include "Inventory/InventoryComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Inventory/Items/RPGItem.h"
 
@@ -139,6 +141,7 @@ void ARPGPlayerControllerBase::DetermineDialogueOptsAndAssignText()
 void ARPGPlayerControllerBase::InitDialogue(AAICharacter* NPCActor)
 {
 	bInDialogue = true;
+	NPCActor->SetActorRotation(UKismetMathLibrary::FindLookAtRotation(NPCActor->GetActorLocation(), Protagonist->GetActorLocation()));
 	TArray<UObject*> Participants;
 	Participants.Add(Protagonist);
 	Participants.Add(NPCActor);
@@ -206,8 +209,29 @@ void ARPGPlayerControllerBase::CheckActorUnderCursorInteractable()
 
 bool ARPGPlayerControllerBase::InRangeOfInteraction()
 {
-	if (InteractionActorObject != nullptr && Protagonist && FVector::Dist(InteractionActorObject->GetActorLocation(), Protagonist->GetActorLocation()) < MIN_DISTANCE) {
-		return true;
+
+	if (!InteractionActorObject || !Protagonist) {
+		return false;
+	}
+
+	float DistanceToProtagonist = FVector::Dist(InteractionActorObject->GetActorLocation(), Protagonist->GetActorLocation());
+
+	switch (InteractionActor->GetObjectAffiliation())
+	{
+	case EProtagonistAffiliation::ALLY:
+	case EProtagonistAffiliation::NEUTRAL:
+		if (DistanceToProtagonist < TARGET_REACHED_DISTANCE) {
+			return true;
+		}
+		break;
+	case EProtagonistAffiliation::ENEMY:
+		if( DistanceToProtagonist < Protagonist->GetInventoryComponent()->GetCurrentWeapon()->GetRange()) {
+			return true;
+		}
+		break;
+	default:
+		return false;
+		break;
 	}
 	return false;
 }

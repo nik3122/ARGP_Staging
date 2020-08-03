@@ -2,8 +2,11 @@
 
 
 #include "Actors/Characters/AICharacter.h"
-#include "DlgManager.h"
+#include "Components/PostProcessComponent.h"
 #include "Player/RPGPlayerControllerBase.h"
+#include "Dialogue/DialogueComponent.h"
+#include "Types/RPGTypes.h"
+#include "DlgManager.h"
 #include "DlgContext.h"
 
 AAICharacter::AAICharacter()
@@ -24,7 +27,7 @@ void AAICharacter::BeginPlay()
 void AAICharacter::Die()
 {
 	// THIS CHARACTER HAS DIED
-	OnNPCDeath.Broadcast(this);
+	OnNPCDeath.Broadcast(this); 
 	Super::Die();	
 }
 
@@ -41,12 +44,25 @@ void AAICharacter::OnEndMouseOver()
 
 void AAICharacter::OnInteract(ARPGCharacterBase* PlayerCharacter)
 {
-	if (CurrentAffiliation != EProtagonistAffiliation::ENEMY) {
-		ARPGPlayerControllerBase* CurrCon = Cast<ARPGPlayerControllerBase>(GetWorld()->GetFirstPlayerController());
-		CurrCon->InitDialogue(this);
-	}
-	else {
+	switch (CurrentAffiliation)
+	{
+	case EProtagonistAffiliation::ALLY:
+	case EProtagonistAffiliation::NEUTRAL:
+		StartDialogueWithPlayer();
+		break;
+	case EProtagonistAffiliation::ENEMY:
 		PlayerCharacter->DoMeleeAttack();
+		break;
+	default:
+		break;
+	}
+}
+
+void AAICharacter::StartDialogueWithPlayer()
+{
+	ARPGPlayerControllerBase* CurrCon = Cast<ARPGPlayerControllerBase>(GetWorld()->GetFirstPlayerController());
+	if (CurrCon) {
+		CurrCon->InitDialogue(this);
 	}
 }
 
@@ -54,4 +70,9 @@ void AAICharacter::SetAffiliationStatus(EProtagonistAffiliation val)
 {
 	CurrentAffiliation = val;
 	HandleOutlineChange();
+}
+
+EProtagonistAffiliation AAICharacter::GetObjectAffiliation()
+{
+	return CurrentAffiliation;
 }

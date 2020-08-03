@@ -72,6 +72,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
 		bool CanUseAnyAbility();
 
+	UFUNCTION(BlueprintPure)
+		bool WasHitFromFront(const FVector& ImpactPoint);
+
 protected:
 
 	UFUNCTION(BlueprintImplementableEvent)
@@ -120,26 +123,28 @@ protected:
 		TSubclassOf<UGameplayEffect> DefaultAttributes;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Abilities)
-		UAnimMontage* DeathMontage;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Abilities)
 		URPGItem* DefaultAttackStarter;
+
+	UPROPERTY(BlueprintReadOnly)
+		UInventoryComponent* InventoryComponent;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation)
+		FCharacterAnimationStruct Animations;
+
+private:
+
+	UAnimMontage* HighPriorityMontage;	
 
 	UPROPERTY()
 		URPGAbilitySystemComponent* AbilitySystemComponent;
-
+	
 	UPROPERTY()
 		URPGAttributeSet* AttributeSet;
 
 	UPROPERTY()
 		bool bAbilitiesInitialized;
 
-	UAnimMontage* HighPriorityMontage;
-
 	friend URPGAttributeSet;
-
-	UPROPERTY(BlueprintReadOnly)
-		UInventoryComponent* InventoryComponent;
 
 public:
 	FORCEINLINE virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override { return Cast<UAbilitySystemComponent>(AbilitySystemComponent); }
@@ -199,4 +204,6 @@ public:
 
 	bool OnDialogueEvent_Implementation(UDlgContext* Context, FName EventName) override { return false; }
 	bool CheckCondition_Implementation(const UDlgContext* Context, FName ConditionName) const override { return false; }
+
+	UInventoryComponent* GetInventoryComponent() { return InventoryComponent; }
 };

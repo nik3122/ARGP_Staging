@@ -8,6 +8,7 @@
 #include "RPGTypes.generated.h"
 
 class URPGItem;
+class UAnimMontage;
 
 UENUM(BlueprintType)
 enum class EProtagonistAffiliation : uint8 {
@@ -26,6 +27,20 @@ enum class ECombatHotkeys : uint8 {
 	DEFAULT_ATTACK UMETA(DisplayName = "Default Attack")
 };
 
+USTRUCT(BlueprintType)
+struct ARGP_STAGING_API FCharacterAnimationStruct {
+
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Item)
+		UAnimMontage* HitFront;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Abilities)
+		UAnimMontage* HitBack;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Abilities)
+		UAnimMontage* DeathMontage;
+};
 
 
 /** Struct representing a slot for an item, shown in the UI */

@@ -24,6 +24,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 		TSubclassOf<URPGGameplayAbility> GetAbilityFromHotkey(ECombatHotkeys InHotkey);
 
+	AWeaponActorBase* GetCurrentWeapon();
+
 protected:
 	virtual void BeginPlay() override;
 
