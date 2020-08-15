@@ -14,6 +14,11 @@
 	GAMEPLAYATTRIBUTE_VALUE_SETTER(PropertyName) \
 	GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FCharacterDamagedDelegate, float, DeltaValue, const FHitResult&, HitInfo, const struct FGameplayTagContainer&, DamageTags, ARPGCharacterBase*, InstigatorCharacter, AActor*, DamageCauser);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCharacterHealthChangedDelegate, float, DeltaValue, const struct FGameplayTagContainer&, EventTags);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCharacterManaChangedDelegate, float, DeltaValue, const struct FGameplayTagContainer&, EventTags);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCharacterMoveSpeedChangedDelegate, float, DeltaValue, const struct FGameplayTagContainer&, EventTags);
+
 /**
  * 
  */
@@ -28,6 +33,15 @@ public:
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UPROPERTY()
+		FCharacterDamagedDelegate OnDamaged;
+	UPROPERTY()
+		FCharacterManaChangedDelegate OnManaChanged;
+	UPROPERTY()
+		FCharacterHealthChangedDelegate OnHealthChanged;
+	UPROPERTY()
+		FCharacterMoveSpeedChangedDelegate OnMoveSpeedChanged;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Health", ReplicatedUsing = OnRep_Health)
 		FGameplayAttributeData Health;
@@ -79,5 +93,5 @@ protected:
 		virtual void OnRep_DefensePower();
 	UFUNCTION()
 		virtual void OnRep_MoveSpeed();
-	
+
 };

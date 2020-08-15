@@ -10,6 +10,8 @@
 class URPGGameplayAbility;
 class AWeaponActorBase;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FGoldChangedDelegate, float, NewGold, float, DeltaValue);
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class ARGP_STAGING_API UInventoryComponent : public UActorComponent
 {
@@ -21,10 +23,11 @@ public:
 	void AddItemToInventory(EItemTypes Slot, URPGItem* InItem);
 	void AddAbilityToCombatMap(ECombatHotkeys InHotkey, TSubclassOf<URPGGameplayAbility> InAbility);
 
-	UFUNCTION(BlueprintCallable)
-		TSubclassOf<URPGGameplayAbility> GetAbilityFromHotkey(ECombatHotkeys InHotkey);
 
-	AWeaponActorBase* GetCurrentWeapon();
+	UFUNCTION(BlueprintCallable)
+		void HandleGoldChange(float DeltaValue); 
+	UPROPERTY()
+		FGoldChangedDelegate OnGoldChanged;
 
 protected:
 	virtual void BeginPlay() override;
@@ -35,9 +38,20 @@ protected:
 		TMap<uint8, TSubclassOf<URPGGameplayAbility>> CombatMap;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 		AWeaponActorBase* CurrentWeapon;
+	UPROPERTY(BlueprintReadOnly)
+		float OwnedGold;
 
 private:
 
 	FORCEINLINE uint8 GetItemTypeHash(const EItemTypes ItemType) { return (uint8)ItemType; }
 	FORCEINLINE uint8 GetCombatHotkeyHash(const ECombatHotkeys HotkeyType) { return (uint8)HotkeyType; }
+public:
+	UFUNCTION(BlueprintCallable)
+		TSubclassOf<URPGGameplayAbility> GetAbilityFromHotkey(ECombatHotkeys InHotkey);
+	UFUNCTION(BlueprintCallable)
+		float GetCurrentGold() { return OwnedGold; }
+	UFUNCTION(BlueprintCallable)
+		AWeaponActorBase* GetCurrentWeapon() const { return CurrentWeapon; }
+
+	void SetCurrentWeapon(AWeaponActorBase* val) { CurrentWeapon = val; }
 };

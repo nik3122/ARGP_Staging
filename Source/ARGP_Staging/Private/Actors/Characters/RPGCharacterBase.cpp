@@ -9,8 +9,12 @@
 #include "Components/PostProcessComponent.h"
 #include "DlgDialogueParticipant.h"
 #include "AbilitySystemGlobals.h"
+#include "Player/RPGPlayerControllerBase.h"
 #include "TimerManager.h"
+#include "Inventory/Items/RPGWeaponItem.h"
+#include "Actors/Weapons/WeaponActorBase.h"
 #include "Inventory/InventoryComponent.h"
+#include "Utils/RPGBlueprintLibrary.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "AbilitySystem/RPGGameplayAbility.h"
 
@@ -41,6 +45,21 @@ ARPGCharacterBase::ARPGCharacterBase()
 void ARPGCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+	ARPGPlayerControllerBase* CurrCon = Cast<ARPGPlayerControllerBase>(Controller);
+	if (AttributeSet) {
+		AttributeSet->OnDamaged.AddDynamic(this, &ARPGCharacterBase::HandleDamage);
+		AttributeSet->OnManaChanged.AddDynamic(this, &ARPGCharacterBase::HandleManaChanged);
+		AttributeSet->OnHealthChanged.AddDynamic(this, &ARPGCharacterBase::HandleHealthChanged);
+		AttributeSet->OnMoveSpeedChanged.AddDynamic(this, &ARPGCharacterBase::HandleMoveSpeedChanged);
+
+		if (CurrCon) {
+			AttributeSet->OnDamaged.AddDynamic(CurrCon, &ARPGPlayerControllerBase::HandleDamage);
+			AttributeSet->OnManaChanged.AddDynamic(CurrCon, &ARPGPlayerControllerBase::HandleManaChanged);
+			AttributeSet->OnHealthChanged.AddDynamic(CurrCon, &ARPGPlayerControllerBase::HandleHealthChanged);
+			AttributeSet->OnMoveSpeedChanged.AddDynamic(CurrCon, &ARPGPlayerControllerBase::HandleMoveSpeedChanged);
+		}
+	}
 }
 
 void ARPGCharacterBase::PossessedBy(AController* NewController)
@@ -52,6 +71,16 @@ void ARPGCharacterBase::PossessedBy(AController* NewController)
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
 		if (DefaultAttackStarter) {
 			GiveAbilityAndAddToInventory(ECombatHotkeys::DEFAULT_ATTACK, DefaultAttackStarter->GrantedAbility);
+			URPGWeaponItem* WeaponItem = Cast<URPGWeaponItem>(DefaultAttackStarter);
+			if (WeaponItem) {
+				FTransform TempTrans = FTransform();
+				AWeaponActorBase* TempWeapon = URPGBlueprintLibrary::SpawnWeaponActor(WeaponItem->WeaponActor, TempTrans, ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn, this, WeaponItem, DefaultWeaponSlot, this);
+				if (TempWeapon) {
+					TempWeapon->SetInstigator(this);
+					TempWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, "WeaponHandMount_rSocket");
+					InventoryComponent->SetCurrentWeapon(TempWeapon);
+				}
+			}
 		}
 	}
 	bAbilitiesInitialized = SetupDefaultAttributes();
@@ -136,21 +165,6 @@ bool ARPGCharacterBase::WasHitFromFront(const FVector& ImpactPoint)
 			return false;
 		}
 	}
-	/*
-	else
-	{
-		// Determine if Right or Left
-
-		if (DistanceToFrontBackPlane >= 0)
-		{
-			return EGDHitReactDirection::Right;
-		}
-		else
-		{
-			return EGDHitReactDirection::Left;
-		}
-	}
-	*/
 	return true;
 }
 
@@ -169,6 +183,9 @@ void ARPGCharacterBase::PlayHighPriorityMontage(UAnimMontage* InMontage, FName S
 
 void ARPGCharacterBase::DelayedDestroy()
 {
+	if (InventoryComponent && InventoryComponent->GetCurrentWeapon()) {
+		GetWorld()->DestroyActor(InventoryComponent->GetCurrentWeapon());
+	}
 	GetWorld()->DestroyActor(this);
 }
 
@@ -295,14 +312,23 @@ FName ARPGCharacterBase::GetNameValue_Implementation(const FName ValueName) cons
 
 void ARPGCharacterBase::HandleDamage(float DamageAmount, const FHitResult& HitInfo, const struct FGameplayTagContainer& DamageTags, ARPGCharacterBase* InstigatorPawn, AActor* DamageCauser)
 {
-	OnDamaged(DamageAmount, HitInfo, DamageTags, InstigatorPawn, DamageCauser);
+	if (IsAlive() && !IsUsingMelee()) {
+		if (WasHitFromFront(HitInfo.ImpactPoint)) {
+			PlayAnimMontage(Animations.HitFront);
+		}
+		else {
+			PlayAnimMontage(Animations.HitBack);
+		}
+	}
 }
 
 void ARPGCharacterBase::HandleHealthChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags)
 {
 	if (bAbilitiesInitialized)
 	{
-		OnHealthChanged(DeltaValue, EventTags);
+		if (!IsAlive()) {
+			Die();
+		}
 	}
 }
 
@@ -310,7 +336,7 @@ void ARPGCharacterBase::HandleManaChanged(float DeltaValue, const struct FGamepl
 {
 	if (bAbilitiesInitialized)
 	{
-		OnManaChanged(DeltaValue, EventTags);
+
 	}
 }
 
@@ -320,7 +346,7 @@ void ARPGCharacterBase::HandleMoveSpeedChanged(float DeltaValue, const struct FG
 
 	if (bAbilitiesInitialized)
 	{
-		OnMoveSpeedChanged(DeltaValue, EventTags);
+
 	}
 }
 

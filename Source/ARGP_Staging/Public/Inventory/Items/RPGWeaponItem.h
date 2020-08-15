@@ -22,6 +22,6 @@ public:
 	}
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Weapon)
-		TSubclassOf<AActor> WeaponActor;
+		TSubclassOf<class AWeaponActorBase> WeaponActor;
 	
 };

@@ -39,7 +39,7 @@ public:
 	bool IsPlayingHighPriorityMontage();
 	void PlayHighPriorityMontage(UAnimMontage* InMontage, FName StartSectionName);
 
-	UFUNCTION(BlueprintImplementableEvent, Category = "Abilities")
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Abilities")
 		bool DoMeleeAttack();
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Abilities")
 		bool IsUsingMelee();
@@ -72,32 +72,22 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
 		bool CanUseAnyAbility();
 
-	UFUNCTION(BlueprintPure)
-		bool WasHitFromFront(const FVector& ImpactPoint);
-
 protected:
-
-	UFUNCTION(BlueprintImplementableEvent)
-		void OnDamaged(float DamageAmount, const FHitResult& HitInfo, const struct FGameplayTagContainer& DamageTags, ARPGCharacterBase* InstigatorCharacter, AActor* DamageCauser);
-
-	UFUNCTION(BlueprintImplementableEvent)
-		void OnHealthChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
-
-	UFUNCTION(BlueprintImplementableEvent)
-		void OnManaChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
-
-	UFUNCTION(BlueprintImplementableEvent)
-		void OnMoveSpeedChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
-
-	UFUNCTION(BlueprintImplementableEvent)
-		void HandleOutlineChange();
 
 	bool SetupDefaultAttributes();
 
-	virtual void HandleDamage(float DamageAmount, const FHitResult& HitInfo, const struct FGameplayTagContainer& DamageTags, ARPGCharacterBase* InstigatorCharacter, AActor* DamageCauser);
-	virtual void HandleHealthChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
-	virtual void HandleManaChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
-	virtual void HandleMoveSpeedChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
+	UFUNCTION()
+		virtual void HandleDamage(float DamageAmount, const FHitResult& HitInfo, const struct FGameplayTagContainer& DamageTags, ARPGCharacterBase* InstigatorCharacter, AActor* DamageCauser);
+	UFUNCTION()
+		virtual void HandleHealthChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
+	UFUNCTION()
+		virtual void HandleManaChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
+	UFUNCTION()
+		virtual void HandleMoveSpeedChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
+
+private:
+
+	bool WasHitFromFront(const FVector& ImpactPoint);
 
 protected:
 
@@ -130,6 +120,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation)
 		FCharacterAnimationStruct Animations;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Abilities)
+		FRPGItemSlot DefaultWeaponSlot;
 
 private:
 

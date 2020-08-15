@@ -5,11 +5,12 @@
 #include "Components/PrimitiveComponent.h"
 #include "ARGP_Staging.h"
 #include "Actors/InteractableObject.h"
-#include "Actors/Characters/RPGCharacterBase.h"
+#include "UMG/UI/UICharacterWidget.h"
 #include "DlgManager.h"
 #include "Blueprint/UserWidget.h"
 #include "Game/RPGGameInstanceBase.h"
 #include "Actors/Characters/RPGCharacterBase.h"
+#include "Actors/Characters/PlayerCharacter.h"
 #include "Actors/Weapons/WeaponActorBase.h"
 #include "Actors/Characters/AICharacter.h"
 #include "Inventory/InventoryComponent.h"
@@ -21,20 +22,16 @@ ARPGPlayerControllerBase::ARPGPlayerControllerBase()
 	bShowMouseCursor = true;
 	DefaultMouseCursor = EMouseCursor::Default;
 	bEnableMouseOverEvents = true;
-	DefaultClickTraceChannel = ECC_Pawn;
+	DefaultClickTraceChannel = ECC_WorldDynamic;
 }
 
 void ARPGPlayerControllerBase::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
-
+	DeltaTimeX = DeltaTime;
 	if (!bInDialogue) {
 		if (bInteractionClicked && InRangeOfInteraction()) {
-			Protagonist->SetActorRotation(UKismetMathLibrary::FindLookAtRotation(Protagonist->GetActorLocation(), InteractionActorObject->GetActorLocation()));
-			InteractionActor->OnInteract(Protagonist);
-			bInteractionClicked = false;
-			bMoveToMouseCursor = false;
-			Protagonist->StopMovement();
+			InteractWithObject();
 			return;
 		}
 
@@ -49,6 +46,8 @@ void ARPGPlayerControllerBase::PlayerTick(float DeltaTime)
 void ARPGPlayerControllerBase::BeginPlay()
 {
 	Super::BeginPlay();
+	CurrentWidget = Cast<UUICharacterWidget>(CreateWidget(this, MainWidgetClass));
+	CurrentWidget->AddToViewport();
 }
 
 void ARPGPlayerControllerBase::SetupInputComponent()
@@ -59,9 +58,9 @@ void ARPGPlayerControllerBase::SetupInputComponent()
 void ARPGPlayerControllerBase::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
-	Protagonist = Cast<ARPGCharacterBase>(InPawn);
+	Protagonist = Cast<APlayerCharacter>(InPawn);
 	if (Protagonist) {
-
+		Protagonist->GetInventoryComponent()->OnGoldChanged.AddDynamic(this, &ARPGPlayerControllerBase::HandleGoldChanged);
 	}
 }
 
@@ -114,8 +113,6 @@ void ARPGPlayerControllerBase::HandleDialogueOptionPressed(int32 OptionNumber)
 
 void ARPGPlayerControllerBase::DetermineDialogueOptsAndAssignText()
 {
-	//TODO delete this fam
-	FString temp = "";
 	if (!CurrentDialogueContext) {
 		return;
 	}
@@ -141,14 +138,40 @@ void ARPGPlayerControllerBase::DetermineDialogueOptsAndAssignText()
 void ARPGPlayerControllerBase::InitDialogue(AAICharacter* NPCActor)
 {
 	bInDialogue = true;
-	NPCActor->SetActorRotation(UKismetMathLibrary::FindLookAtRotation(NPCActor->GetActorLocation(), Protagonist->GetActorLocation()));
 	TArray<UObject*> Participants;
 	Participants.Add(Protagonist);
 	Participants.Add(NPCActor);
 	SetCurrentDialogueContext(UDlgManager::StartDialogue(DialogueObject, Participants));
 	SetDialogueWidget(CreateDialogueWidget());
 	DetermineDialogueOptsAndAssignText();
-	FHitResult TempResult;
+}
+
+void ARPGPlayerControllerBase::HandleDamage(float DamageAmount, const FHitResult& HitInfo, const struct FGameplayTagContainer& DamageTags, ARPGCharacterBase* InstigatorCharacter, AActor* DamageCauser)
+{
+	
+}
+
+void ARPGPlayerControllerBase::HandleHealthChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags)
+{
+
+}
+
+void ARPGPlayerControllerBase::HandleManaChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags)
+{
+
+}
+
+void ARPGPlayerControllerBase::HandleMoveSpeedChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags)
+{
+
+}
+
+
+void ARPGPlayerControllerBase::HandleGoldChanged(float NewGold, float DeltaValue)
+{
+	if (CurrentWidget) {
+		CurrentWidget->SetGold(NewGold);
+	}
 }
 
 void ARPGPlayerControllerBase::MoveToMouseCursor()
@@ -191,19 +214,26 @@ void ARPGPlayerControllerBase::CheckActorUnderCursorInteractable()
 	ObjectType.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldDynamic));
 	GetHitResultUnderCursorForObjects(ObjectType, true, TempResult);
 
-	if (TempResult.bBlockingHit) {
+	if (TempResult.bBlockingHit && TempResult.GetActor()) {
 		if (GetPawn() != TempResult.GetActor() && TempResult.GetActor()->GetClass()->ImplementsInterface(UInteractableObject::StaticClass())) {
 			HighlightedActor = TempResult.GetActor();
-			HighlightedActor->OnStartMouseOver();
-			bIsCursorOverValidActor = true;
+			if (HighlightedActor->IsInteractable()) {
+				HighlightedActor->OnStartMouseOver();
+				bIsCursorOverValidActor = true;
+			}
+			else {
+				HighlightedActor->OnEndMouseOver();
+				HighlightedActor = nullptr;
+				bIsCursorOverValidActor = false;
+			}
 		}
 	}
 	else {
 		if (HighlightedActor) {
 			HighlightedActor->OnEndMouseOver();
-			HighlightedActor = nullptr;
-			bIsCursorOverValidActor = false;
 		}
+		HighlightedActor = nullptr;
+		bIsCursorOverValidActor = false;
 	}
 }
 
@@ -229,6 +259,11 @@ bool ARPGPlayerControllerBase::InRangeOfInteraction()
 			return true;
 		}
 		break;
+	case EProtagonistAffiliation::LOOT:
+		if (DistanceToProtagonist < 150.f) {
+			return true;
+		}
+		break;
 	default:
 		return false;
 		break;
@@ -239,7 +274,8 @@ bool ARPGPlayerControllerBase::InRangeOfInteraction()
 void ARPGPlayerControllerBase::InteractWithObject()
 {
 	AActor* TempActor = Cast<AActor>(InteractionActor.GetObject());
-	Protagonist->SetActorRotation(UKismetMathLibrary::FindLookAtRotation(Protagonist->GetActorLocation(), TempActor->GetActorLocation()));
+	FRotator TargetRotation = UKismetMathLibrary::FindLookAtRotation(Protagonist->GetActorLocation(), TempActor->GetActorLocation());
+	Protagonist->SetActorRotation(FRotator(Protagonist->GetActorRotation().Pitch, TargetRotation.Yaw, Protagonist->GetActorRotation().Roll));
 	InteractionActor->OnInteract(Protagonist);
 	bInteractionClicked = false;
 	bMoveToMouseCursor = false;

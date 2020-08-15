@@ -6,13 +6,16 @@
 #include "ARGP_Staging.h"
 #include "GameFramework/PlayerController.h"
 #include "Actors/InteractableObject.h"
+#include "GameplayTagContainer.h"
+#include "Actors/Loot/BaseLootActor.h"
+#include "Actors/Loot/LootGenerator.h"
 #include "RPGPlayerControllerBase.generated.h"
 
 class UDlgContext;
-class URPGCharacterBase;
+class APlayerCharacter;
 class AAICharacter;
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCharacterDeathDelegate, AAICharacter*, DeadCharacter);
+class UUICharacterWidget;
+class ULootEngine;
 
 UCLASS()
 class ARGP_STAGING_API ARPGPlayerControllerBase : public APlayerController
@@ -26,6 +29,7 @@ public:
 	virtual void PlayerTick(float DeltaTime) override;
 
 	virtual void OnPossess(APawn* InPawn) override;
+
 
 	UFUNCTION(BlueprintCallable)
 		bool IsCursorOverValidTarget() { return bIsCursorOverValidActor; }
@@ -44,6 +48,7 @@ public:
 		void OnDialogueOption2Pressed();
 	UFUNCTION(BlueprintCallable)
 		void OnDialogueOption3Pressed();
+
 
 	void HandleDialogueOptionPressed(int32 OptionNumber);
 
@@ -65,24 +70,24 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 		void AssignDialogueBoxText_1Opts(const FText& MainText, const FText& Option1Text);
 
-	UFUNCTION(BlueprintImplementableEvent)
-		void HandleNPCDeath(AAICharacter* DeadChar);
-
 	UFUNCTION(BlueprintCallable)
 		void DetermineDialogueOptsAndAssignText();
 
 	void SetDialogueWidget(UUserWidget* val) { DialogueWidget = val; }
-
 	void InitDialogue(AAICharacter* NPCActor);
 
-	// TODO Delete this fam	
+	APlayerCharacter* GetProtagonist() { return Protagonist; }
 
-	UPROPERTY(EditDefaultsOnly)
-		class UDlgDialogue* DialogueObject;
-
-protected:
-	UPROPERTY(BlueprintReadOnly)
-		UUserWidget* DialogueWidget;
+	UFUNCTION()
+		virtual void HandleDamage(float DamageAmount, const FHitResult& HitInfo, const struct FGameplayTagContainer& DamageTags, ARPGCharacterBase* InstigatorCharacter, AActor* DamageCauser);
+	UFUNCTION()
+		virtual void HandleHealthChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
+	UFUNCTION()
+		virtual void HandleManaChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
+	UFUNCTION()
+		virtual void HandleMoveSpeedChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
+	UFUNCTION()
+		virtual void HandleGoldChanged(float NewGold, float DeltaValue);
 
 private:
 
@@ -93,9 +98,21 @@ private:
 	bool InRangeOfInteraction();
 	void InteractWithObject();
 
+protected:
+
+	UPROPERTY(EditDefaultsOnly)
+		TSubclassOf<UUICharacterWidget> MainWidgetClass;
+	UPROPERTY(BlueprintReadOnly)
+		UUserWidget* DialogueWidget;
+
+	// TODO Delete this fam	
+
+	UPROPERTY(EditDefaultsOnly)
+		class UDlgDialogue* DialogueObject;
+
 private:
 
-	class ARPGCharacterBase* Protagonist;
+	class APlayerCharacter* Protagonist;
 
 	TScriptInterface<IInteractableObject> InteractionActor;
 	AActor* InteractionActorObject;
@@ -110,5 +127,9 @@ private:
 	const float TARGET_REACHED_DISTANCE = 120.f;
 	const float MIN_DISTANCE = 80.f;
 
+	float DeltaTimeX;
+
 	UDlgContext* CurrentDialogueContext;
+
+	UUICharacterWidget* CurrentWidget;
 };

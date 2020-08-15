@@ -2,8 +2,14 @@
 #include "Inventory/Items/RPGItem.h"
 #include "Actors/Weapons/WeaponActorBase.h"
 #include "Actors/Weapons/ProjectileActorBase.h"
+#include "Player/RPGPlayerControllerBase.h"
+#include "Kismet/GameplayStatics.h"
+#include "Actors/Characters/PlayerCharacter.h"
+#include "Components/PostProcessComponent.h"
+#include "Actors/Loot/BaseLootActor.h"
+#include "Game/RPGGameInstanceBase.h"
+#include "Game/LootEngine.h"
 #include "Inventory/Items/RPGWeaponItem.h"
-
 
 URPGBlueprintLibrary::URPGBlueprintLibrary()
 {
@@ -89,4 +95,54 @@ TArray<FActiveGameplayEffectHandle> URPGBlueprintLibrary::ApplyExternalEffectCon
 		}
 	}
 	return AllEffects;
+}
+
+UInventoryComponent* URPGBlueprintLibrary::GetPlayerInventory()
+{
+	ARPGPlayerControllerBase* CurrCon = GetFirstPlayerController();
+	if (CurrCon && CurrCon->GetProtagonist()) {
+		return CurrCon->GetProtagonist()->GetInventoryComponent();
+	}	
+	return nullptr;
+}
+
+ARPGPlayerControllerBase* URPGBlueprintLibrary::GetFirstPlayerController()
+{
+	TArray<APlayerController*> Cons;
+	if (GEngine) {
+		GEngine->GetAllLocalPlayerControllers(Cons);
+		if (Cons.Num() > 0 && Cons[0]) {
+			ARPGPlayerControllerBase* CurrCon = Cast<ARPGPlayerControllerBase>(Cons[0]);
+			return CurrCon;
+		}
+	}
+	return nullptr;
+}
+
+int32 URPGBlueprintLibrary::GetStencilValue(EProtagonistAffiliation InAffiliation)
+{
+	switch (InAffiliation)
+	{
+	default:
+		break;
+	case EProtagonistAffiliation::ALLY:
+		return 252;
+		break;
+	case EProtagonistAffiliation::ENEMY:
+		return 254;
+		break;
+	case EProtagonistAffiliation::NEUTRAL:
+		return 255;
+		break;
+	case EProtagonistAffiliation::LOOT:
+		return 253;
+		break;
+	}
+	return 255;
+}
+
+URPGGameInstanceBase* URPGBlueprintLibrary::GetGameInstance(AActor* InContext)
+{
+	URPGGameInstanceBase* ReturnInst = Cast<URPGGameInstanceBase>(UGameplayStatics::GetGameInstance(InContext));
+	return ReturnInst;
 }

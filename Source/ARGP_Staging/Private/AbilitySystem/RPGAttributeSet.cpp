@@ -166,8 +166,8 @@ void URPGAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbac
 
 			if (TargetCharacter)
 			{
-				TargetCharacter->HandleDamage(LocalDamageDone, HitResult, SourceTags, SourceCharacter, SourceActor);
-				TargetCharacter->HandleHealthChanged(-LocalDamageDone, SourceTags);
+				OnDamaged.Broadcast(LocalDamageDone, HitResult, SourceTags, SourceCharacter, SourceActor);
+				OnHealthChanged.Broadcast(-LocalDamageDone, SourceTags);
 			}
 		}
 	}
@@ -177,7 +177,7 @@ void URPGAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbac
 
 		if (TargetCharacter)
 		{
-			TargetCharacter->HandleHealthChanged(DeltaValue, SourceTags);
+			OnHealthChanged.Broadcast(DeltaValue, SourceTags);
 		}
 	}
 	else if (Data.EvaluatedData.Attribute == GetManaAttribute())
@@ -186,14 +186,14 @@ void URPGAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbac
 
 		if (TargetCharacter)
 		{
-			TargetCharacter->HandleManaChanged(DeltaValue, SourceTags);
+			OnManaChanged.Broadcast(DeltaValue, SourceTags);
 		}
 	}
 	else if (Data.EvaluatedData.Attribute == GetMoveSpeedAttribute())
 	{
 		if (TargetCharacter)
 		{
-			TargetCharacter->HandleMoveSpeedChanged(DeltaValue, SourceTags);
+			OnMoveSpeedChanged.Broadcast(DeltaValue, SourceTags);
 		}
 	}
 }

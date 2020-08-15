@@ -6,35 +6,40 @@
 #include "Player/RPGPlayerControllerBase.h"
 #include "Dialogue/DialogueComponent.h"
 #include "Types/RPGTypes.h"
+#include "Inventory/InventoryComponent.h"
+#include "Actors/Loot/BaseLootActor.h"
+#include "Game/LootEngine.h"
+#include "Utils/RPGBlueprintLibrary.h"
 #include "DlgManager.h"
 #include "DlgContext.h"
+#include "Game/RPGGameInstanceBase.h"
 
 AAICharacter::AAICharacter()
 {
 	CurrentAffiliation = EProtagonistAffiliation::NEUTRAL;
-
-	PostProcessComponent = CreateDefaultSubobject<UPostProcessComponent>(TEXT("PostProcessComponent"));
 	DialogueComponent = CreateDefaultSubobject<UDialogueComponent>(TEXT("DialogueComponent"));
 }
 
 void AAICharacter::BeginPlay()
 {
-	ARPGPlayerControllerBase* CurrCon = Cast<ARPGPlayerControllerBase>(GetWorld()->GetFirstPlayerController());
-	OnNPCDeath.AddDynamic(CurrCon, &ARPGPlayerControllerBase::HandleNPCDeath);
 	Super::BeginPlay();
+	URPGGameInstanceBase* GameInst = URPGBlueprintLibrary::GetGameInstance(this);
+	if (GameInst && GameInst->LootEngine) {
+		OnNPCDeath.AddDynamic(GameInst->LootEngine, &ALootGenerator::HandleAIDeath);
+	}
 }
 
 void AAICharacter::Die()
 {
-	// THIS CHARACTER HAS DIED
-	OnNPCDeath.Broadcast(this); 
+	OnNPCDeath.Broadcast(this, LootLevel);
+	URPGBlueprintLibrary::GetPlayerInventory()->HandleGoldChange(50.f);
 	Super::Die();	
 }
 
 void AAICharacter::OnStartMouseOver()
 {
-	HandleOutlineChange();
 	GetMesh()->SetRenderCustomDepth(true);
+	GetMesh()->SetCustomDepthStencilValue(URPGBlueprintLibrary::GetStencilValue(CurrentAffiliation));
 }
 
 void AAICharacter::OnEndMouseOver()
@@ -58,6 +63,11 @@ void AAICharacter::OnInteract(ARPGCharacterBase* PlayerCharacter)
 	}
 }
 
+bool AAICharacter::IsInteractable()
+{
+	return IsAlive();
+}
+
 void AAICharacter::StartDialogueWithPlayer()
 {
 	ARPGPlayerControllerBase* CurrCon = Cast<ARPGPlayerControllerBase>(GetWorld()->GetFirstPlayerController());
@@ -69,7 +79,6 @@ void AAICharacter::StartDialogueWithPlayer()
 void AAICharacter::SetAffiliationStatus(EProtagonistAffiliation val)
 {
 	CurrentAffiliation = val;
-	HandleOutlineChange();
 }
 
 EProtagonistAffiliation AAICharacter::GetObjectAffiliation()

@@ -14,7 +14,8 @@ UENUM(BlueprintType)
 enum class EProtagonistAffiliation : uint8 {
 	ALLY UMETA(DisplayName = "Allies"),
 	ENEMY UMETA(DisplayName = "Enemies"),
-	NEUTRAL UMETA(DisplayName = "Neutral")
+	NEUTRAL UMETA(DisplayName = "Neutral"),
+	LOOT UMETA(DisplayName = "Loot")
 };
 
 UENUM(BlueprintType)

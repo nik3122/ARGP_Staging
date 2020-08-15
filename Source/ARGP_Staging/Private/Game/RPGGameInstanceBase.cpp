@@ -4,7 +4,13 @@
 #include "Utils/RPGAssetManager.h"
 #include "Utils/RGPSaveGame.h"
 #include "Inventory/Items/RPGItem.h"
+#include "Utils/RPGBlueprintLibrary.h"
 #include "Kismet/GameplayStatics.h"
+
+void URPGGameInstanceBase::Init()
+{
+	LootEngine = GetWorld()->SpawnActor<ALootGenerator>(LootEngineClass);
+}
 
 URPGGameInstanceBase::URPGGameInstanceBase()
 	: SaveSlot(TEXT("SaveGame"))

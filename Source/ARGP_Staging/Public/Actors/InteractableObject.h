@@ -29,5 +29,8 @@ public:
 		virtual void OnStartMouseOver() = 0;
 
 	UFUNCTION(BlueprintCallable)
+		virtual bool IsInteractable() = 0;
+
+	UFUNCTION(BlueprintCallable)
 		virtual EProtagonistAffiliation GetObjectAffiliation() = 0;
 };

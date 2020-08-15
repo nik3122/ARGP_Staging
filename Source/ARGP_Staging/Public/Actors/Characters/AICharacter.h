@@ -7,6 +7,8 @@
 #include "Player/RPGPlayerControllerBase.h"
 #include "AICharacter.generated.h"
 
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FNPCDeathDelegate, AAICharacter*, DeadCharacter, float, LootLevel);
 /**
  * 
  */
@@ -25,6 +27,8 @@ public:
 	void OnStartMouseOver() override;
 	void OnEndMouseOver() override;
 	void OnInteract(ARPGCharacterBase* PlayerCharacter) override;
+	bool IsInteractable() override;
+
 	void StartDialogueWithPlayer();
 
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
@@ -41,10 +45,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 		class UDialogueComponent* DialogueComponent;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
-		class UPostProcessComponent* PostProcessComponent;
+	UPROPERTY(EditDefaultsOnly)
+		float LootLevel;
 
-	UPROPERTY(BlueprintAssignable)
-		FCharacterDeathDelegate OnNPCDeath;
-
+	FNPCDeathDelegate OnNPCDeath; 
 };

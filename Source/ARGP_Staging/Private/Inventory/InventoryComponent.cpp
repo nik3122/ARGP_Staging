@@ -29,9 +29,17 @@ TSubclassOf<URPGGameplayAbility> UInventoryComponent::GetAbilityFromHotkey(EComb
 	return *CombatMap.Find(GetCombatHotkeyHash(InHotkey));
 }
 
-AWeaponActorBase* UInventoryComponent::GetCurrentWeapon()
+void UInventoryComponent::HandleGoldChange(float DeltaValue)
 {
-	return CurrentWeapon;
+	if (OwnedGold + DeltaValue >= 0) {
+		OwnedGold += DeltaValue;
+		OnGoldChanged.Broadcast(OwnedGold, DeltaValue);
+	}
+	else {
+		float OldGoldValue = OwnedGold;
+		OwnedGold = 0;
+		OnGoldChanged.Broadcast(OwnedGold, OldGoldValue);
+	}
 }
 
 void UInventoryComponent::BeginPlay()

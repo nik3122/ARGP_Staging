@@ -9,9 +9,14 @@
 #include "Inventory/Items/RPGItem.h"
 #include "Inventory/Items/RPGWeaponItem.h"
 #include "Types/RPGAbilityTypes.h"
+#include "Components/PostProcessComponent.h"
+#include "Player/RPGPlayerControllerBase.h"
+#include "Game/RPGGameInstanceBase.h"
 #include "RPGBlueprintLibrary.generated.h"
 
 class AProjectileActorBase;
+class UInventoryComponent;
+class ULootEngine;
 
 /**
  * 
@@ -53,4 +58,13 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = Ability)
 		static TArray<FActiveGameplayEffectHandle> ApplyExternalEffectContainerSpec(const FRPGGameplayEffectContainerSpec& ContainerSpec);	
+
+	UFUNCTION(BlueprintCallable)
+		static UInventoryComponent* GetPlayerInventory();
+
+	static ARPGPlayerControllerBase* GetFirstPlayerController();	
+	static int32 GetStencilValue(EProtagonistAffiliation InAffiliation);
+	static URPGGameInstanceBase* GetGameInstance(AActor* InContext);
+
+
 };

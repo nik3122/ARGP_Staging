@@ -64,6 +64,7 @@ protected:
 private:
 
 	bool bActorHasBeenHit;
+
 public:
 	FRPGItemSlot GetSlot() const { return Slot; }
 	void SetSlot(FRPGItemSlot val) { Slot = val; }
