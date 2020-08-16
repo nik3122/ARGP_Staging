@@ -66,3 +66,27 @@ TArray<FActiveGameplayEffectHandle> URPGGameplayAbility::ApplyEffectContainer(FG
 	FRPGGameplayEffectContainerSpec Spec = MakeEffectContainerSpec(ContainerTag, EventData, OverrideGameplayLevel);
 	return ApplyEffectContainerSpec(Spec);
 }
+
+const FGameplayTagContainer* URPGGameplayAbility::GetCooldownTags() const
+{
+	FGameplayTagContainer* MutableTags = const_cast<FGameplayTagContainer*>(&TempCooldownTags);
+	const FGameplayTagContainer* ParentTags = Super::GetCooldownTags();
+	if (ParentTags)
+	{
+		MutableTags->AppendTags(*ParentTags);
+	}
+	MutableTags->AppendTags(CooldownTags);
+	return MutableTags;
+}
+
+void URPGGameplayAbility::ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo * ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
+{
+	UGameplayEffect* CooldownGE = GetCooldownGameplayEffect();
+	if (CooldownGE)
+	{
+		FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(CooldownGE->GetClass(), GetAbilityLevel());
+		SpecHandle.Data.Get()->DynamicGrantedTags.AppendTags(CooldownTags);
+		SpecHandle.Data.Get()->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(FName("Data.Cooldown")), CooldownDuration.GetValueAtLevel(GetAbilityLevel()));
+		ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, SpecHandle);
+	}
+}

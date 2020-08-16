@@ -74,7 +74,9 @@ public:
 		void DetermineDialogueOptsAndAssignText();
 
 	void SetDialogueWidget(UUserWidget* val) { DialogueWidget = val; }
-	void InitDialogue(AAICharacter* NPCActor);
+
+	UFUNCTION(BlueprintCallable)
+		void InitDialogue(AAICharacter* NPCActor);
 
 	APlayerCharacter* GetProtagonist() { return Protagonist; }
 
@@ -88,7 +90,13 @@ public:
 		virtual void HandleMoveSpeedChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags);
 	UFUNCTION()
 		virtual void HandleGoldChanged(float NewGold, float DeltaValue);
+	UFUNCTION()
+		virtual void HandleMaxHealthChanged(float NewMaxHP);
 
+	UFUNCTION(BlueprintCallable)
+		bool GetCanCharacterMove() const { return bCharacterCanMove; }
+	UFUNCTION(BlueprintCallable)
+		void SetCanCharacterMove(bool val) { bCharacterCanMove = val; }
 private:
 
 	void MoveToMouseCursor();
@@ -123,6 +131,7 @@ private:
 
 	bool bIsCursorOverValidActor;
 	bool bInteractionClicked;
+	bool bCharacterCanMove = true;
 
 	const float TARGET_REACHED_DISTANCE = 120.f;
 	const float MIN_DISTANCE = 80.f;

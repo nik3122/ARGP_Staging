@@ -21,6 +21,9 @@ void UMeleeWeaponGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHand
 			EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		}
 	}
+	else {
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+	}
 }
 
 void UMeleeWeaponGameplayAbility::OnCancelled(FGameplayTag EventTag, FGameplayEventData EventData)
@@ -30,7 +33,7 @@ void UMeleeWeaponGameplayAbility::OnCancelled(FGameplayTag EventTag, FGameplayEv
 
 void UMeleeWeaponGameplayAbility::OnCompleted(FGameplayTag EventTag, FGameplayEventData EventData)
 {
-
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 }
 
 void UMeleeWeaponGameplayAbility::OnBlendOut(FGameplayTag EventTag, FGameplayEventData EventData)

@@ -7,6 +7,7 @@
 #include "Abilities/GameplayAbilityTypes.h"
 #include "Types/RPGAbilityTypes.h"
 #include "../ARGP_Staging.h"
+#include "Types/RPGTypes.h"
 #include "RPGTargetType.generated.h"
 
 class ARPGCharacterBase;
@@ -23,6 +24,9 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent)
 		void GetTargets(ARPGCharacterBase* TargetingCharacter, AActor* TargetingActor, FGameplayEventData EventData, TArray<FHitResult>& OutHitResults, TArray<AActor*>& OutActors) const;
+
+	UFUNCTION(BlueprintCallable)
+		bool IsValidTarget(APawn* TargetingCharacter, AActor* DestinationActor, EProtagonistAffiliation InType) const;
 };
 
 UCLASS(NotBlueprintable)
@@ -37,12 +41,34 @@ public:
 };
 
 UCLASS(NotBlueprintable)
-class ARGP_STAGING_API URPGTargetType_UseEventData : public URPGTargetType
+class ARGP_STAGING_API URPGTargetType_ALL_UseEventData : public URPGTargetType
 {
 	GENERATED_BODY()
 
 public:
-	URPGTargetType_UseEventData() {}
+	URPGTargetType_ALL_UseEventData() {}
+
+	virtual void GetTargets_Implementation(ARPGCharacterBase* TargetingCharacter, AActor* TargetingActor, FGameplayEventData EventData, TArray<FHitResult>& OutHitResults, TArray<AActor*>& OutActors) const override;
+};
+
+UCLASS(NotBlueprintable)
+class ARGP_STAGING_API URPGTargetType_ENEMIES_UseEventData : public URPGTargetType
+{
+	GENERATED_BODY()
+
+public:
+	URPGTargetType_ENEMIES_UseEventData() {}
+
+	virtual void GetTargets_Implementation(ARPGCharacterBase* TargetingCharacter, AActor* TargetingActor, FGameplayEventData EventData, TArray<FHitResult>& OutHitResults, TArray<AActor*>& OutActors) const override;
+};
+
+UCLASS(NotBlueprintable)
+class ARGP_STAGING_API URPGTargetType_ALLIES_UseEventData : public URPGTargetType
+{
+	GENERATED_BODY()
+
+public:
+	URPGTargetType_ALLIES_UseEventData() {}
 
 	virtual void GetTargets_Implementation(ARPGCharacterBase* TargetingCharacter, AActor* TargetingActor, FGameplayEventData EventData, TArray<FHitResult>& OutHitResults, TArray<AActor*>& OutActors) const override;
 };

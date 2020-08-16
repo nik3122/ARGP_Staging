@@ -1,5 +1,6 @@
 #include "Actors/Weapons/WeaponActorBase.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "Actors/Characters/RPGCharacterBase.h"
 #include "Actors/InteractableObject.h"
 #include "TimerManager.h"
 
@@ -45,7 +46,7 @@ void AWeaponActorBase::EndWeaponAttack()
 void AWeaponActorBase::ActorBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Overlap Begin called"));
-	if (OtherActor->GetClass()->ImplementsInterface(UInteractableObject::StaticClass()) && bIsAttacking && !bActorHasBeenHit) {
+	if (bIsAttacking && !bActorHasBeenHit && OtherActor && OtherActor != GetInstigator() && OtherActor->Implements<UAbilitySystemInterface>()) {
 		bActorHasBeenHit = true;
  		FGameplayEventData EventData;
 		EventData.Target = OtherActor;

@@ -86,6 +86,7 @@ void URPGAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, f
 
 	if (Attribute == GetMaxHealthAttribute())
 	{
+		OnMaxHealthChanged.Broadcast(NewValue);
 		AdjustAttributeForMaxChange(Health, MaxHealth, NewValue, GetHealthAttribute());
 	}
 	else if (Attribute == GetMaxManaAttribute())

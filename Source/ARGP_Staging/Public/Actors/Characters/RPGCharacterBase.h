@@ -72,6 +72,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
 		bool CanUseAnyAbility();
 
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+		bool CanUseAnyWeapon();
+
+	URPGAttributeSet* GetAttributeSet() const { return AttributeSet; }
+	void SetAttributeSet(URPGAttributeSet* val) { AttributeSet = val; }
+
 protected:
 
 	bool SetupDefaultAttributes();

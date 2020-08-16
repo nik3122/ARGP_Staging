@@ -15,3 +15,22 @@ void UUICharacterWidget::SetGold(float InGold)
 	Gold = FText::AsNumber(InGold);
 	RefreshValues();
 }
+
+void UUICharacterWidget::SetHealth(float InHealth)
+{
+	MaxHealth = InHealth;
+	Health = InHealth;
+	RefreshValues();
+}
+
+void UUICharacterWidget::SetMaxHealth(float InMaxHealth)
+{
+	MaxHealth = InMaxHealth;
+	RefreshValues();
+}
+
+void UUICharacterWidget::AddHealth(float InDelta)
+{
+	Health += InDelta;
+	RefreshValues();
+}

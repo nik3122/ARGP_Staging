@@ -18,6 +18,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FCharacterDamagedDelegate, float, 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCharacterHealthChangedDelegate, float, DeltaValue, const struct FGameplayTagContainer&, EventTags);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCharacterManaChangedDelegate, float, DeltaValue, const struct FGameplayTagContainer&, EventTags);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCharacterMoveSpeedChangedDelegate, float, DeltaValue, const struct FGameplayTagContainer&, EventTags);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCharacterMaxHealthChangedDelegate, float, NewValue);
+
 
 /**
  * 
@@ -42,6 +44,8 @@ public:
 		FCharacterHealthChangedDelegate OnHealthChanged;
 	UPROPERTY()
 		FCharacterMoveSpeedChangedDelegate OnMoveSpeedChanged;
+	UPROPERTY()
+		FCharacterMaxHealthChangedDelegate OnMaxHealthChanged;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Health", ReplicatedUsing = OnRep_Health)
 		FGameplayAttributeData Health;

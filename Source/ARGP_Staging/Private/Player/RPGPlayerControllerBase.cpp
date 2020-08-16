@@ -29,7 +29,7 @@ void ARPGPlayerControllerBase::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
 	DeltaTimeX = DeltaTime;
-	if (!bInDialogue) {
+	if (!bInDialogue && bCharacterCanMove) {
 		if (bInteractionClicked && InRangeOfInteraction()) {
 			InteractWithObject();
 			return;
@@ -48,6 +48,9 @@ void ARPGPlayerControllerBase::BeginPlay()
 	Super::BeginPlay();
 	CurrentWidget = Cast<UUICharacterWidget>(CreateWidget(this, MainWidgetClass));
 	CurrentWidget->AddToViewport();
+	if (CurrentWidget) {
+		CurrentWidget->SetHealth(Protagonist->GetHealth());
+	}
 }
 
 void ARPGPlayerControllerBase::SetupInputComponent()
@@ -61,6 +64,11 @@ void ARPGPlayerControllerBase::OnPossess(APawn* InPawn)
 	Protagonist = Cast<APlayerCharacter>(InPawn);
 	if (Protagonist) {
 		Protagonist->GetInventoryComponent()->OnGoldChanged.AddDynamic(this, &ARPGPlayerControllerBase::HandleGoldChanged);
+		Protagonist->GetAttributeSet()->OnDamaged.AddDynamic(this, &ARPGPlayerControllerBase::HandleDamage);
+		Protagonist->GetAttributeSet()->OnManaChanged.AddDynamic(this, &ARPGPlayerControllerBase::HandleManaChanged);
+		Protagonist->GetAttributeSet()->OnHealthChanged.AddDynamic(this, &ARPGPlayerControllerBase::HandleHealthChanged);
+		Protagonist->GetAttributeSet()->OnMoveSpeedChanged.AddDynamic(this, &ARPGPlayerControllerBase::HandleMoveSpeedChanged);
+		Protagonist->GetAttributeSet()->OnMaxHealthChanged.AddDynamic(this, &ARPGPlayerControllerBase::HandleMaxHealthChanged);
 	}
 }
 
@@ -153,7 +161,9 @@ void ARPGPlayerControllerBase::HandleDamage(float DamageAmount, const FHitResult
 
 void ARPGPlayerControllerBase::HandleHealthChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags)
 {
-
+	if (CurrentWidget) {
+		CurrentWidget->AddHealth(DeltaValue);
+	}
 }
 
 void ARPGPlayerControllerBase::HandleManaChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags)
@@ -174,10 +184,17 @@ void ARPGPlayerControllerBase::HandleGoldChanged(float NewGold, float DeltaValue
 	}
 }
 
+void ARPGPlayerControllerBase::HandleMaxHealthChanged(float NewMaxHP)
+{
+	if (CurrentWidget) {
+		CurrentWidget->SetMaxHealth(NewMaxHP);
+	}
+}
+
 void ARPGPlayerControllerBase::MoveToMouseCursor()
 {
 	FHitResult Hit;
-	GetHitResultUnderCursor(ECC_Visibility, false, Hit);
+	GetHitResultUnderCursor(ECC_WorldStatic, false, Hit);
 	if (Hit.bBlockingHit) {
 		SetNewMoveDestination(Hit.ImpactPoint);
 	}
@@ -212,7 +229,8 @@ void ARPGPlayerControllerBase::CheckActorUnderCursorInteractable()
 	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectType;
 	ObjectType.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn));
 	ObjectType.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldDynamic));
-	GetHitResultUnderCursorForObjects(ObjectType, true, TempResult);
+	// GetHitResultUnderCursorForObjects(ObjectType, true, TempResult);
+	GetHitResultUnderCursorByChannel(UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1), true, TempResult);
 
 	if (TempResult.bBlockingHit && TempResult.GetActor()) {
 		if (GetPawn() != TempResult.GetActor() && TempResult.GetActor()->GetClass()->ImplementsInterface(UInteractableObject::StaticClass())) {

@@ -25,12 +25,24 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 		FText GetGold() { return Gold; }
-
 	void SetGold(float InGold);
+
+	UFUNCTION(BlueprintCallable)
+		float GetHealth() { return Health; }
+	UFUNCTION(BlueprintCallable)
+		float GetMaxHealth() { return MaxHealth; }
+	void SetHealth(float InHealth);
+	void SetMaxHealth(float InMaxHealth);
+	void AddHealth(float InDelta);
 
 private:
 
 	UPROPERTY(transient)
 		FText Gold;
 	
+	UPROPERTY(transient)
+		float Health;
+
+	UPROPERTY(transient)
+		float MaxHealth;
 };

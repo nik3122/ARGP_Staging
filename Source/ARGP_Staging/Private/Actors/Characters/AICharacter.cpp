@@ -27,6 +27,7 @@ void AAICharacter::BeginPlay()
 	if (GameInst && GameInst->LootEngine) {
 		OnNPCDeath.AddDynamic(GameInst->LootEngine, &ALootGenerator::HandleAIDeath);
 	}
+	HandleAffiliationStatusChange();
 }
 
 void AAICharacter::Die()
@@ -79,6 +80,7 @@ void AAICharacter::StartDialogueWithPlayer()
 void AAICharacter::SetAffiliationStatus(EProtagonistAffiliation val)
 {
 	CurrentAffiliation = val;
+	HandleAffiliationStatusChange();
 }
 
 EProtagonistAffiliation AAICharacter::GetObjectAffiliation()

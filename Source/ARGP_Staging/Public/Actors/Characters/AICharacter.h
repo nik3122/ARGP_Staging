@@ -33,6 +33,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
 		void SetAffiliationStatus(EProtagonistAffiliation val);
+	UFUNCTION(BlueprintImplementableEvent)
+		void HandleAffiliationStatusChange();
 
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
 		virtual EProtagonistAffiliation GetObjectAffiliation() override;

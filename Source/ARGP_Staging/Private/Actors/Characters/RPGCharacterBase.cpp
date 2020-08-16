@@ -24,7 +24,7 @@ ARPGCharacterBase::ARPGCharacterBase()
 	AbilitySystemComponent->SetIsReplicated(true);
 
 	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
-	AttributeSet = CreateDefaultSubobject<URPGAttributeSet>(TEXT("AttributeSet"));
+	SetAttributeSet(CreateDefaultSubobject<URPGAttributeSet>(TEXT("AttributeSet")));
 
 	CharacterLevel = 1;
 	bAbilitiesInitialized = false;
@@ -47,18 +47,11 @@ void ARPGCharacterBase::BeginPlay()
 	Super::BeginPlay();
 
 	ARPGPlayerControllerBase* CurrCon = Cast<ARPGPlayerControllerBase>(Controller);
-	if (AttributeSet) {
-		AttributeSet->OnDamaged.AddDynamic(this, &ARPGCharacterBase::HandleDamage);
-		AttributeSet->OnManaChanged.AddDynamic(this, &ARPGCharacterBase::HandleManaChanged);
-		AttributeSet->OnHealthChanged.AddDynamic(this, &ARPGCharacterBase::HandleHealthChanged);
-		AttributeSet->OnMoveSpeedChanged.AddDynamic(this, &ARPGCharacterBase::HandleMoveSpeedChanged);
-
-		if (CurrCon) {
-			AttributeSet->OnDamaged.AddDynamic(CurrCon, &ARPGPlayerControllerBase::HandleDamage);
-			AttributeSet->OnManaChanged.AddDynamic(CurrCon, &ARPGPlayerControllerBase::HandleManaChanged);
-			AttributeSet->OnHealthChanged.AddDynamic(CurrCon, &ARPGPlayerControllerBase::HandleHealthChanged);
-			AttributeSet->OnMoveSpeedChanged.AddDynamic(CurrCon, &ARPGPlayerControllerBase::HandleMoveSpeedChanged);
-		}
+	if (GetAttributeSet()) {
+		GetAttributeSet()->OnDamaged.AddDynamic(this, &ARPGCharacterBase::HandleDamage);
+		GetAttributeSet()->OnManaChanged.AddDynamic(this, &ARPGCharacterBase::HandleManaChanged);
+		GetAttributeSet()->OnHealthChanged.AddDynamic(this, &ARPGCharacterBase::HandleHealthChanged);
+		GetAttributeSet()->OnMoveSpeedChanged.AddDynamic(this, &ARPGCharacterBase::HandleMoveSpeedChanged);
 	}
 }
 
@@ -128,9 +121,8 @@ void ARPGCharacterBase::GiveAbilityAndAddToInventory(ECombatHotkeys InHotkey, TS
 
 void ARPGCharacterBase::ActivateAbilityByClass(TSubclassOf<URPGGameplayAbility> AbilityClass)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Activate by Class"));
 	if (AbilitySystemComponent) {
-		AbilitySystemComponent->TryActivateAbilityByClass(AbilityClass, true);
+		AbilitySystemComponent->TryActivateAbilityByClass(AbilityClass, false);
 	}
 }
 
@@ -147,23 +139,25 @@ bool ARPGCharacterBase::CanUseAnyAbility()
 	return IsAlive() && !UGameplayStatics::IsGamePaused(this) && !IsUsingSkill();
 }
 
+bool ARPGCharacterBase::CanUseAnyWeapon()
+{
+	return IsAlive() && !UGameplayStatics::IsGamePaused(this) && !IsUsingMelee();
+}
+
 bool ARPGCharacterBase::WasHitFromFront(const FVector& ImpactPoint)
 {
 	const FVector& ActorLocation = GetActorLocation();
 	float DistanceToFrontBackPlane = FVector::PointPlaneDist(ImpactPoint, ActorLocation, GetActorRightVector());
 	float DistanceToRightLeftPlane = FVector::PointPlaneDist(ImpactPoint, ActorLocation, GetActorForwardVector());
 
-
-	if (FMath::Abs(DistanceToFrontBackPlane) <= FMath::Abs(DistanceToRightLeftPlane))
+	if (DistanceToRightLeftPlane >= 0)
 	{
-		if (DistanceToRightLeftPlane >= 0)
-		{
-			return true;
-		}
-		else
-		{
-			return false;
-		}
+		return true;
+	}
+	else
+	{
+		return false;
+	
 	}
 	return true;
 }
@@ -352,27 +346,27 @@ void ARPGCharacterBase::HandleMoveSpeedChanged(float DeltaValue, const struct FG
 
 float ARPGCharacterBase::GetHealth() const
 {
-	return AttributeSet->GetHealth();
+	return GetAttributeSet()->GetHealth();
 }
 
 float ARPGCharacterBase::GetMaxHealth() const
 {
-	return AttributeSet->GetMaxHealth();
+	return GetAttributeSet()->GetMaxHealth();
 }
 
 float ARPGCharacterBase::GetMana() const
 {
-	return AttributeSet->GetMana();
+	return GetAttributeSet()->GetMana();
 }
 
 float ARPGCharacterBase::GetMaxMana() const
 {
-	return AttributeSet->GetMaxMana();
+	return GetAttributeSet()->GetMaxMana();
 }
 
 float ARPGCharacterBase::GetMoveSpeed() const
 {
-	return AttributeSet->GetMoveSpeed();
+	return GetAttributeSet()->GetMoveSpeed();
 }
 
 int32 ARPGCharacterBase::GetCharacterLevel() const
