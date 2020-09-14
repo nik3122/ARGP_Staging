@@ -6,6 +6,7 @@
 #include "ARGP_Staging.h"
 #include "Actors/InteractableObject.h"
 #include "UMG/UI/UICharacterWidget.h"
+#include "QuestManager.h"
 #include "DlgManager.h"
 #include "Blueprint/UserWidget.h"
 #include "Game/RPGGameInstanceBase.h"
@@ -23,12 +24,17 @@ ARPGPlayerControllerBase::ARPGPlayerControllerBase()
 	DefaultMouseCursor = EMouseCursor::Default;
 	bEnableMouseOverEvents = true;
 	DefaultClickTraceChannel = ECC_WorldDynamic;
+
+	QuestManager = CreateDefaultSubobject<UQuestManager>(TEXT("QuestManager"));
 }
 
 void ARPGPlayerControllerBase::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
 	DeltaTimeX = DeltaTime;
+
+	bCharacterCanMove = CanProtagonistMove();
+
 	if (!bInDialogue && bCharacterCanMove) {
 		if (bInteractionClicked && InRangeOfInteraction()) {
 			InteractWithObject();
@@ -50,6 +56,7 @@ void ARPGPlayerControllerBase::BeginPlay()
 	CurrentWidget->AddToViewport();
 	if (CurrentWidget) {
 		CurrentWidget->SetHealth(Protagonist->GetHealth());
+		CurrentWidget->SetMana(Protagonist->GetMana());
 	}
 }
 
@@ -69,6 +76,7 @@ void ARPGPlayerControllerBase::OnPossess(APawn* InPawn)
 		Protagonist->GetAttributeSet()->OnHealthChanged.AddDynamic(this, &ARPGPlayerControllerBase::HandleHealthChanged);
 		Protagonist->GetAttributeSet()->OnMoveSpeedChanged.AddDynamic(this, &ARPGPlayerControllerBase::HandleMoveSpeedChanged);
 		Protagonist->GetAttributeSet()->OnMaxHealthChanged.AddDynamic(this, &ARPGPlayerControllerBase::HandleMaxHealthChanged);
+		Protagonist->GetAttributeSet()->OnMaxManaChanged.AddDynamic(this, &ARPGPlayerControllerBase::HandleMaxManaChanged);
 	}
 }
 
@@ -77,8 +85,14 @@ void ARPGPlayerControllerBase::OnInteractionClicked()
 	if (HighlightedActor) {
 		InteractionActor = HighlightedActor;
 		InteractionActorObject = Cast<AActor>(HighlightedActor.GetObject());
-		bInteractionClicked = true;
-		SetNewMoveDestination(InteractionActorObject->GetActorLocation());
+		if (!InRangeOfInteraction()) {
+			bInteractionClicked = true;
+			SetNewMoveDestination(InteractionActorObject->GetActorLocation());
+		}
+		else {
+			bInteractionClicked = false;
+			InteractWithObject();
+		}
 	}
 }
 
@@ -112,7 +126,7 @@ void ARPGPlayerControllerBase::HandleDialogueOptionPressed(int32 OptionNumber)
 			CurrentDialogueContext = nullptr;
 			bInDialogue = false;
 			DialogueWidget->RemoveFromViewport();
-		}
+		}  
 		else {
 			DetermineDialogueOptsAndAssignText();
 		}
@@ -168,7 +182,10 @@ void ARPGPlayerControllerBase::HandleHealthChanged(float DeltaValue, const struc
 
 void ARPGPlayerControllerBase::HandleManaChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags)
 {
-
+	UE_LOG(LogTemp, Warning, TEXT("Mana changed"));
+	if (CurrentWidget) {
+		CurrentWidget->AddMana(DeltaValue);
+	}
 }
 
 void ARPGPlayerControllerBase::HandleMoveSpeedChanged(float DeltaValue, const struct FGameplayTagContainer& EventTags)
@@ -191,6 +208,14 @@ void ARPGPlayerControllerBase::HandleMaxHealthChanged(float NewMaxHP)
 	}
 }
 
+void ARPGPlayerControllerBase::HandleMaxManaChanged(float NewMaxMana)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Max Mana Changed"));
+	if (CurrentWidget) {
+		CurrentWidget->SetMaxMana(NewMaxMana);
+	}
+}
+
 void ARPGPlayerControllerBase::MoveToMouseCursor()
 {
 	FHitResult Hit;
@@ -207,6 +232,9 @@ void ARPGPlayerControllerBase::SetNewMoveDestination(const FVector DestLocation)
 		float const Distance = FVector::Dist(DestLocation, Protagonist->GetActorLocation());
 		if ((Distance > MIN_DISTANCE))
 		{
+			if (Protagonist->GetCurrentMontage()) {
+				Protagonist->StopAnimMontage();
+			}
 			UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, DestLocation);
 		}
 	}
@@ -229,11 +257,13 @@ void ARPGPlayerControllerBase::CheckActorUnderCursorInteractable()
 	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectType;
 	ObjectType.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn));
 	ObjectType.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldDynamic));
-	// GetHitResultUnderCursorForObjects(ObjectType, true, TempResult);
 	GetHitResultUnderCursorByChannel(UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1), true, TempResult);
 
 	if (TempResult.bBlockingHit && TempResult.GetActor()) {
 		if (GetPawn() != TempResult.GetActor() && TempResult.GetActor()->GetClass()->ImplementsInterface(UInteractableObject::StaticClass())) {
+			if (HighlightedActor) {
+				HighlightedActor->OnEndMouseOver();
+			}
 			HighlightedActor = TempResult.GetActor();
 			if (HighlightedActor->IsInteractable()) {
 				HighlightedActor->OnStartMouseOver();
@@ -298,4 +328,12 @@ void ARPGPlayerControllerBase::InteractWithObject()
 	bInteractionClicked = false;
 	bMoveToMouseCursor = false;
 	Protagonist->StopMovement();
+}
+
+bool ARPGPlayerControllerBase::CanProtagonistMove()
+{
+	if (Protagonist) {
+		return Protagonist->CanCharacterCanMove();
+	}
+	return false;
 }

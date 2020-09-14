@@ -10,7 +10,7 @@ public class ARGP_Staging : ModuleRules
 	
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
 
-        PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "UMG", "SlateCore", "InputCore", "MoviePlayer", "GameplayAbilities", "GameplayTags", "AIModule", "GameplayTasks", "DlgSystem" });
+        PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "UMG", "SlateCore", "InputCore", "MoviePlayer", "GameplayAbilities", "GameplayTags", "AIModule", "GameplayTasks", "DlgSystem", "QuestSystem"});
 
     }
 }

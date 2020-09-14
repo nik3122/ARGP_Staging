@@ -34,3 +34,22 @@ void UUICharacterWidget::AddHealth(float InDelta)
 	Health += InDelta;
 	RefreshValues();
 }
+
+void UUICharacterWidget::SetMana(float InMana)
+{
+	MaxMana = InMana;
+	Mana = InMana;
+	RefreshValues();
+}
+
+void UUICharacterWidget::SetMaxMana(float InMaxMana)
+{
+	MaxMana = InMaxMana;
+	RefreshValues();
+}
+
+void UUICharacterWidget::AddMana(float InDelta)
+{
+	Mana += InDelta;
+	RefreshValues();
+}

@@ -16,6 +16,7 @@ class APlayerCharacter;
 class AAICharacter;
 class UUICharacterWidget;
 class ULootEngine;
+class UQuestManager;
 
 UCLASS()
 class ARGP_STAGING_API ARPGPlayerControllerBase : public APlayerController
@@ -92,11 +93,23 @@ public:
 		virtual void HandleGoldChanged(float NewGold, float DeltaValue);
 	UFUNCTION()
 		virtual void HandleMaxHealthChanged(float NewMaxHP);
+	UFUNCTION()
+		virtual void HandleMaxManaChanged(float NewMaxMana);
 
 	UFUNCTION(BlueprintCallable)
 		bool GetCanCharacterMove() const { return bCharacterCanMove; }
 	UFUNCTION(BlueprintCallable)
 		void SetCanCharacterMove(bool val) { bCharacterCanMove = val; }
+
+	// QUEST SYSTEM
+
+
+
+	UFUNCTION(BlueprintCallable)
+		UQuestManager* GetQuestManager() const { return QuestManager; }
+	void SetQuestManager(class UQuestManager* val) { QuestManager = val; }
+
+
 private:
 
 	void MoveToMouseCursor();
@@ -105,6 +118,8 @@ private:
 	void CheckActorUnderCursorInteractable();
 	bool InRangeOfInteraction();
 	void InteractWithObject();
+
+	bool CanProtagonistMove();
 
 protected:
 
@@ -141,4 +156,6 @@ private:
 	UDlgContext* CurrentDialogueContext;
 
 	UUICharacterWidget* CurrentWidget;
+
+	UQuestManager* QuestManager;
 };

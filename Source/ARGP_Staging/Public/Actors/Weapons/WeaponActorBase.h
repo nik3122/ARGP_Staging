@@ -61,9 +61,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Defaults")
 		bool bIsAttacking;
 
-private:
+private :
 
-	bool bActorHasBeenHit;
+	TArray<AActor*> AlreadyHitActors;
 
 public:
 	FRPGItemSlot GetSlot() const { return Slot; }

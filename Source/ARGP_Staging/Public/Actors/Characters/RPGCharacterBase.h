@@ -82,6 +82,11 @@ protected:
 
 	bool SetupDefaultAttributes();
 
+	virtual void HandleHitReactDuringAnimation();
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void HandleMaterialHitFlicker();
+
 	UFUNCTION()
 		virtual void HandleDamage(float DamageAmount, const FHitResult& HitInfo, const struct FGameplayTagContainer& DamageTags, ARPGCharacterBase* InstigatorCharacter, AActor* DamageCauser);
 	UFUNCTION()
@@ -130,9 +135,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Abilities)
 		FRPGItemSlot DefaultWeaponSlot;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UDecalComponent* IndicatorDecal;
+
 private:
 
 	UAnimMontage* HighPriorityMontage;	
+	bool bCharacterCanMove;
 
 	UPROPERTY()
 		URPGAbilitySystemComponent* AbilitySystemComponent;
@@ -147,7 +156,11 @@ private:
 
 public:
 	FORCEINLINE virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override { return Cast<UAbilitySystemComponent>(AbilitySystemComponent); }
-
+	
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+		bool CanCharacterCanMove() const { return bCharacterCanMove; }
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+		void SetCharacterCanMove(bool val) { bCharacterCanMove = val; }
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
 		int32 GetAttackDelayCount() const { return AttackDelayCount; }
 	UFUNCTION(BlueprintCallable, Category = "Abilities")

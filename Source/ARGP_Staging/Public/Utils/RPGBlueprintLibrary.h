@@ -59,12 +59,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Ability)
 		static TArray<FActiveGameplayEffectHandle> ApplyExternalEffectContainerSpec(const FRPGGameplayEffectContainerSpec& ContainerSpec);	
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintPure)
 		static UInventoryComponent* GetPlayerInventory();
+
+	UFUNCTION(BlueprintPure)
+		static UQuestManager* GetQuestManager();
 
 	static ARPGPlayerControllerBase* GetFirstPlayerController();	
 	static int32 GetStencilValue(EProtagonistAffiliation InAffiliation);
 	static URPGGameInstanceBase* GetGameInstance(AActor* InContext);
-
-
 };

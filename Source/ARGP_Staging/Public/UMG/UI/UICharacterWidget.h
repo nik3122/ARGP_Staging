@@ -23,17 +23,26 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 		void RefreshValues();
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintPure)
 		FText GetGold() { return Gold; }
 	void SetGold(float InGold);
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintPure)
 		float GetHealth() { return Health; }
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintPure)
 		float GetMaxHealth() { return MaxHealth; }
+	UFUNCTION(BlueprintPure)
+		float GetMana() { return Mana; }
+	UFUNCTION(BlueprintPure)
+		float GetMaxMana() { return MaxMana; }
+
 	void SetHealth(float InHealth);
 	void SetMaxHealth(float InMaxHealth);
 	void AddHealth(float InDelta);
+
+	void SetMana(float InMana);
+	void SetMaxMana(float InMaxMana);
+	void AddMana(float InDelta);
 
 private:
 
@@ -45,4 +54,10 @@ private:
 
 	UPROPERTY(transient)
 		float MaxHealth;
+
+	UPROPERTY(transient)
+		float Mana;
+
+	UPROPERTY(transient)
+		float MaxMana;
 };

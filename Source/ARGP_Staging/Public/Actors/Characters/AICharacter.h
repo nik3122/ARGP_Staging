@@ -39,6 +39,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
 		virtual EProtagonistAffiliation GetObjectAffiliation() override;
 
+	void HandleHitReactDuringAnimation() override;
+
 protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Abilities)

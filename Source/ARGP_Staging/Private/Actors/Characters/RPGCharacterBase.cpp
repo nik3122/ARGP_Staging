@@ -15,6 +15,7 @@
 #include "Actors/Weapons/WeaponActorBase.h"
 #include "Inventory/InventoryComponent.h"
 #include "Utils/RPGBlueprintLibrary.h"
+#include "Components/DecalComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "AbilitySystem/RPGGameplayAbility.h"
 
@@ -26,8 +27,12 @@ ARPGCharacterBase::ARPGCharacterBase()
 	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 	SetAttributeSet(CreateDefaultSubobject<URPGAttributeSet>(TEXT("AttributeSet")));
 
+	IndicatorDecal = CreateDefaultSubobject<UDecalComponent>(TEXT("IndicatorDecal"));
+	IndicatorDecal->SetupAttachment(RootComponent);
+
 	CharacterLevel = 1;
 	bAbilitiesInitialized = false;
+	bCharacterCanMove = true;
 
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
@@ -234,6 +239,11 @@ bool ARPGCharacterBase::SetupDefaultAttributes()
 	return false;
 }
 
+void ARPGCharacterBase::HandleHitReactDuringAnimation()
+{
+	return;
+}
+
 bool ARPGCharacterBase::ModifyIntValue_Implementation(const FName ValueName, bool bDelta, int32 Value)
 {
 	if (!CharDialogueData.Integers.Contains(ValueName))
@@ -306,13 +316,20 @@ FName ARPGCharacterBase::GetNameValue_Implementation(const FName ValueName) cons
 
 void ARPGCharacterBase::HandleDamage(float DamageAmount, const FHitResult& HitInfo, const struct FGameplayTagContainer& DamageTags, ARPGCharacterBase* InstigatorPawn, AActor* DamageCauser)
 {
-	if (IsAlive() && !IsUsingMelee()) {
+	if (!IsAlive()) {
+		return;
+	}
+	HandleMaterialHitFlicker();
+	if (!IsUsingMelee()) {
 		if (WasHitFromFront(HitInfo.ImpactPoint)) {
 			PlayAnimMontage(Animations.HitFront);
 		}
 		else {
 			PlayAnimMontage(Animations.HitBack);
 		}
+	}
+	else {
+		HandleHitReactDuringAnimation();
 	}
 }
 

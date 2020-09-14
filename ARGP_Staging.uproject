@@ -73,6 +73,11 @@
 		{
 			"Name": "Niagara",
 			"Enabled": true
+		},
+		{
+			"Name": "QuestSystem",
+			"Enabled": true,
+			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/content/b3039048c042400393e756a4796b86eb"
 		}
 	]
 }

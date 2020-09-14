@@ -91,6 +91,7 @@ void URPGAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, f
 	}
 	else if (Attribute == GetMaxManaAttribute())
 	{
+		OnMaxManaChanged.Broadcast(NewValue);
 		AdjustAttributeForMaxChange(Mana, MaxMana, NewValue, GetManaAttribute());
 	}
 }

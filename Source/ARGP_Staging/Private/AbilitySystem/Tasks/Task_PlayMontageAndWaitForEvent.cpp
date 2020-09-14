@@ -86,6 +86,12 @@ void UTask_PlayMontageAndWaitForEvent::OnGameplayEvent(FGameplayTag EventTag, co
 
 		EventReceived.Broadcast(EventTag, TempData);
 	}
+	else {
+		FGameplayEventData TempData = *Payload;
+		TempData.EventTag = EventTag;
+
+		OnCancelled.Broadcast(EventTag, TempData);
+	}
 }
 
 UTask_PlayMontageAndWaitForEvent* UTask_PlayMontageAndWaitForEvent::PlayMontageAndWaitForEvent(UGameplayAbility* OwningAbility,

@@ -22,18 +22,17 @@ AAICharacter::AAICharacter()
 
 void AAICharacter::BeginPlay()
 {
+	HandleAffiliationStatusChange();
 	Super::BeginPlay();
 	URPGGameInstanceBase* GameInst = URPGBlueprintLibrary::GetGameInstance(this);
 	if (GameInst && GameInst->LootEngine) {
 		OnNPCDeath.AddDynamic(GameInst->LootEngine, &ALootGenerator::HandleAIDeath);
 	}
-	HandleAffiliationStatusChange();
 }
 
 void AAICharacter::Die()
 {
 	OnNPCDeath.Broadcast(this, LootLevel);
-	URPGBlueprintLibrary::GetPlayerInventory()->HandleGoldChange(50.f);
 	Super::Die();	
 }
 
@@ -86,4 +85,14 @@ void AAICharacter::SetAffiliationStatus(EProtagonistAffiliation val)
 EProtagonistAffiliation AAICharacter::GetObjectAffiliation()
 {
 	return CurrentAffiliation;
+}
+
+void AAICharacter::HandleHitReactDuringAnimation()
+{
+	Super::HandleHitReactDuringAnimation();
+	GetMesh()->bPauseAnims = true;
+	FTimerHandle MeshPauseHandle;
+	GetWorld()->GetTimerManager().SetTimer(MeshPauseHandle, [this]() {
+		GetMesh()->bPauseAnims = false;
+	}, .05, false);
 }

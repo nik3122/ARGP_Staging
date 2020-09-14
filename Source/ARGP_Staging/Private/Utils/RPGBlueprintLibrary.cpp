@@ -106,6 +106,15 @@ UInventoryComponent* URPGBlueprintLibrary::GetPlayerInventory()
 	return nullptr;
 }
 
+UQuestManager* URPGBlueprintLibrary::GetQuestManager()
+{
+	ARPGPlayerControllerBase* CurrCon = GetFirstPlayerController();
+	if (CurrCon) {
+		return CurrCon->GetQuestManager();
+	}
+	return nullptr;
+}
+
 ARPGPlayerControllerBase* URPGBlueprintLibrary::GetFirstPlayerController()
 {
 	TArray<APlayerController*> Cons;

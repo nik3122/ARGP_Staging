@@ -18,6 +18,7 @@ AWeaponActorBase::AWeaponActorBase()
 void AWeaponActorBase::BeginPlay()
 {
 	Super::BeginPlay();
+	CapsuleCollision->IgnoreActorWhenMoving(GetInstigator(), true);
 	CapsuleCollision->IgnoreActorWhenMoving(this, true);
 	CapsuleCollision->SetGenerateOverlapEvents(false);
 	CapsuleCollision->OnComponentBeginOverlap.AddDynamic(this, &AWeaponActorBase::ActorBeginOverlap);
@@ -26,6 +27,7 @@ void AWeaponActorBase::BeginPlay()
 
 void AWeaponActorBase::BeginWeaponAttack(FGameplayTag InTag, float InAttackDelayTime, int32 InAttackDelayCount)
 {
+	AlreadyHitActors.Empty();
 	UE_LOG(LogTemp, Warning, TEXT("Begin Attack called"));
 	CapsuleCollision->SetGenerateOverlapEvents(true);
 	AttackEventTag = InTag;
@@ -37,6 +39,7 @@ void AWeaponActorBase::BeginWeaponAttack(FGameplayTag InTag, float InAttackDelay
 
 void AWeaponActorBase::EndWeaponAttack()
 {
+	AlreadyHitActors.Empty();
 	UE_LOG(LogTemp, Warning, TEXT("End Attack called"));
 	CapsuleCollision->SetGenerateOverlapEvents(false);
 	bIsAttacking = false;
@@ -46,9 +49,9 @@ void AWeaponActorBase::EndWeaponAttack()
 void AWeaponActorBase::ActorBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Overlap Begin called"));
-	if (bIsAttacking && !bActorHasBeenHit && OtherActor && OtherActor != GetInstigator() && OtherActor->Implements<UAbilitySystemInterface>()) {
-		bActorHasBeenHit = true;
- 		FGameplayEventData EventData;
+	if (bIsAttacking && OtherActor && OtherActor->Implements<UAbilitySystemInterface>() && !AlreadyHitActors.Contains(OtherActor)) {
+		AlreadyHitActors.Add(OtherActor);
+		FGameplayEventData EventData;
 		EventData.Target = OtherActor;
 		EventData.Instigator = GetInstigator();
 		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(GetInstigator(), AttackEventTag, EventData);
@@ -59,8 +62,4 @@ void AWeaponActorBase::ActorBeginOverlap(UPrimitiveComponent* OverlappedComp, AA
 void AWeaponActorBase::ActorEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Overlap End called"));
-	FTimerHandle  DelayHandle;
-	GetWorld()->GetTimerManager().SetTimer(DelayHandle, [this]() {
-		bActorHasBeenHit = false;
-	}, .2f, false);
 }
