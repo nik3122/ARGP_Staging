@@ -65,7 +65,6 @@ public:
 	UFUNCTION(BlueprintPure)
 		static UQuestManager* GetQuestManager();
 
-	static FGameplayTag GetStealthTag();
 	static ARPGPlayerControllerBase* GetFirstPlayerController();	
 	static int32 GetStencilValue(EProtagonistAffiliation InAffiliation);
 	static URPGGameInstanceBase* GetGameInstance(AActor* InContext);

@@ -8,7 +8,9 @@
 #include "Actors/InteractableObject.h"
 #include "GameplayTagContainer.h"
 #include "Actors/Loot/BaseLootActor.h"
+#include "Inventory/PlayerInventoryInterface.h"
 #include "Actors/Loot/LootGenerator.h"
+#include "Inventory/InventoryComponent.h"
 #include "RPGPlayerControllerBase.generated.h"
 
 class UDlgContext;
@@ -19,7 +21,7 @@ class ULootEngine;
 class UQuestManager;
 
 UCLASS()
-class ARGP_STAGING_API ARPGPlayerControllerBase : public APlayerController
+class ARGP_STAGING_API ARPGPlayerControllerBase : public APlayerController, public IPlayerInventoryInterface
 {
 	GENERATED_BODY()
 
@@ -31,6 +33,9 @@ public:
 
 	virtual void OnPossess(APawn* InPawn) override;
 
+	///////////////////////////////
+	// MOUSE INTERACTION FUNCTIONS
+	///////////////////////////////
 
 	UFUNCTION(BlueprintCallable)
 		bool IsCursorOverValidTarget() { return bIsCursorOverValidActor; }
@@ -41,6 +46,17 @@ public:
 	UFUNCTION(BlueprintCallable)
 		void OnSetDestinationReleased();
 
+	APlayerCharacter* GetProtagonist() { return Protagonist; }
+
+	UFUNCTION(BlueprintCallable)
+		bool GetCanCharacterMove() const { return bCharacterCanMove; }
+	UFUNCTION(BlueprintCallable)
+		void SetCanCharacterMove(bool val) { bCharacterCanMove = val; }
+
+	//////////////////////////////
+	// DIALOGUE FUNCTIONS
+	//////////////////////////////
+
 	UFUNCTION(BlueprintCallable)
 		void OnDialogueOption0Pressed();
 	UFUNCTION(BlueprintCallable)
@@ -49,7 +65,6 @@ public:
 		void OnDialogueOption2Pressed();
 	UFUNCTION(BlueprintCallable)
 		void OnDialogueOption3Pressed();
-
 
 	void HandleDialogueOptionPressed(int32 OptionNumber);
 
@@ -61,13 +76,10 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 		void AssignDialogueBoxText_4Opts(const FText& MainText, const FText& Option1Text, const FText& Option2Text, const FText& Option3Text, const FText& Option4Text);
-
 	UFUNCTION(BlueprintImplementableEvent)
 		void AssignDialogueBoxText_3Opts(const FText& MainText, const FText& Option1Text, const FText& Option2Text, const FText& Option3Text);
-
 	UFUNCTION(BlueprintImplementableEvent)
 		void AssignDialogueBoxText_2Opts(const FText& MainText, const FText& Option1Text, const FText& Option2Text);
-
 	UFUNCTION(BlueprintImplementableEvent)
 		void AssignDialogueBoxText_1Opts(const FText& MainText, const FText& Option1Text);
 
@@ -79,7 +91,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 		void InitDialogue(AAICharacter* NPCActor);
 
-	APlayerCharacter* GetProtagonist() { return Protagonist; }
+	//////////////////////////
+	// UI DELEGATES
+	//////////////////////////
 
 	UFUNCTION()
 		virtual void HandleDamage(float DamageAmount, const FHitResult& HitInfo, const struct FGameplayTagContainer& DamageTags, ARPGCharacterBase* InstigatorCharacter, AActor* DamageCauser);
@@ -96,19 +110,41 @@ public:
 	UFUNCTION()
 		virtual void HandleMaxManaChanged(float NewMaxMana);
 
-	UFUNCTION(BlueprintCallable)
-		bool GetCanCharacterMove() const { return bCharacterCanMove; }
-	UFUNCTION(BlueprintCallable)
-		void SetCanCharacterMove(bool val) { bCharacterCanMove = val; }
-
+	////////////////////////
 	// QUEST SYSTEM
-
-
+	////////////////////////
 
 	UFUNCTION(BlueprintCallable)
 		UQuestManager* GetQuestManager() const { return QuestManager; }
 	void SetQuestManager(class UQuestManager* val) { QuestManager = val; }
 
+	///////////////////////
+	// INVENTORY
+	///////////////////////
+
+	virtual const TMap<URPGItem*, FRPGItemData>& GetInventoryDataMap() const override
+	{
+		return InventoryComponent->InventoryData;
+	}
+	virtual const TMap<FRPGItemSlot, URPGItem*>& GetSlottedItemMap() const override
+	{
+		return InventoryComponent->SlottedItems;
+	}
+	virtual FOnInventoryItemChangedNative& GetInventoryItemChangedDelegate() override
+	{
+		return InventoryComponent->OnInventoryItemChangedNative;
+	}
+	virtual FOnSlottedItemChangedNative& GetSlottedItemChangedDelegate() override
+	{
+		return InventoryComponent->OnSlottedItemChangedNative;
+	}
+	virtual FOnInventoryLoadedNative& GetInventoryLoadedDelegate() override
+	{
+		return InventoryComponent->OnInventoryLoadedNative;
+	}
+
+	UFUNCTION(BlueprintCallable)
+		UInventoryComponent* GetInventoryComponent() { return InventoryComponent; }
 
 private:
 
@@ -158,4 +194,5 @@ private:
 	UUICharacterWidget* CurrentWidget;
 
 	UQuestManager* QuestManager;
+	UInventoryComponent* InventoryComponent;
 };

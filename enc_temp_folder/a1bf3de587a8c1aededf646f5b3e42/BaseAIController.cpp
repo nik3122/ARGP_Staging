@@ -7,7 +7,6 @@
 #include "Kismet/GameplayStatics.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "Actors/Characters/RPGCharacterBase.h"
-#include "Utils/RPGBlueprintLibrary.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "TimerManager.h"
 
@@ -62,7 +61,7 @@ void ABaseAIController::OnPerceptionUpdated(const TArray<AActor*>& UpdatedActors
 {
 	for (AActor* Actor : UpdatedActors) {
 		ARPGCharacterBase* CurrPawn = Cast<ARPGCharacterBase>(Actor);
-		if (CurrPawn && !CurrPawn->GetAbilitySystemComponent()->HasMatchingGameplayTag(URPGBlueprintLibrary::GetStealthTag()) && CurrentPawn && CurrPawn->IsAlive() && !GetSeeingPawn())
+		if (CurrPawn && CurrentPawn && CurrPawn->IsAlive() && !GetSeeingPawn())
 		{
 			CurrentBlackboard->SetValueAsObject(BlackboardEnemyKey, Actor);
 		}

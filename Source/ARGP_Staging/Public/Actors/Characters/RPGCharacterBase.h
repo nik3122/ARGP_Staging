@@ -12,13 +12,16 @@
 #include "AbilitySystemInterface.h"
 #include "DlgDialogueParticipant.h"
 #include "Types/QuestDialogueTypes.h"
+#include "Inventory/PlayerInventoryInterface.h"
 #include "Actors/InteractableObject.h"
+#include "Inventory/Items/RPGWeaponItem.h"
 #include "RPGCharacterBase.generated.h"
 
 
 class URPGGameplayAbility;
 class UGameplayEffect;
 class AWeaponActorBase;
+class URPGWeaponItem;
 class UInventoryComponent;
 
 UCLASS(Abstract)
@@ -36,57 +39,92 @@ public:
 
 	void StopMovement();
 
-	bool IsPlayingHighPriorityMontage();
-	void PlayHighPriorityMontage(UAnimMontage* InMontage, FName StartSectionName);
-
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Abilities")
-		bool DoMeleeAttack();
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Abilities")
-		bool IsUsingMelee();
-
-	UFUNCTION(BlueprintImplementableEvent, Category = "Abilities")
-		bool DoSkillAttack();
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Abilities")
-		bool IsUsingSkill();
-
-	UFUNCTION(BlueprintImplementableEvent, Category = "Abilities")
-		void UseItemPotion();
-
 	UFUNCTION(BlueprintCallable)
 		void DelayedDestroy();
 	UFUNCTION(BlueprintCallable)
 		virtual void Die();
 
-	UFUNCTION(BlueprintCallable, Category = "Abilities")
-		void GiveAbilityAndAddToInventory(ECombatHotkeys InHotkey, TSubclassOf<URPGGameplayAbility> AbilityClass);
-
-	UFUNCTION(BlueprintCallable, Category = "Abilities")
-		void ActivateAbilityByClass(TSubclassOf<URPGGameplayAbility> AbilityClass);
-
-	UFUNCTION(BlueprintCallable, Category = "Abilities")
-		void GetActiveAbilitiesWithTags(FGameplayTagContainer AbilityTags, TArray<URPGGameplayAbility*>& ActiveAbilities);
-
-	UFUNCTION(BlueprintCallable, Category = "Abilities")
-		bool IsAlive() { return GetHealth() > 0.f; }
-
-	UFUNCTION(BlueprintCallable, Category = "Abilities")
-		bool CanUseAnyAbility();
-
-	UFUNCTION(BlueprintCallable, Category = "Abilities")
-		bool CanUseAnyWeapon();
-
 	URPGAttributeSet* GetAttributeSet() const { return AttributeSet; }
 	void SetAttributeSet(URPGAttributeSet* val) { AttributeSet = val; }
 
+	AWeaponActorBase* GetCurrentWeaponActor() const { return CurrentWeaponActor; }
+	void SetCurrentWeaponActor(AWeaponActorBase* val) { CurrentWeaponActor = val; }
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Abilities")
+		void UseItemPotion();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Abilities")
+		bool DoMeleeAttack();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Abilities")
+		bool IsUsingMelee();
+	UFUNCTION(BlueprintImplementableEvent, Category = "Abilities")
+		bool DoSkillAttack();
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category = "Abilities")
+		bool IsUsingSkill();
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+		bool IsAlive() { return GetHealth() > 0.f; }
+
 protected:
+	//////////////////////////
+	// ABILITIES
+	//////////////////////////
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+		bool CanUseAnyAbility();
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+		bool CanUseAnyWeapon();
+
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+		void GetActiveAbilitiesWithTags(FGameplayTagContainer AbilityTags, TArray<URPGGameplayAbility*>& ActiveAbilities);
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+		bool ActivateAbilitiesWithItemSlot(FRPGItemSlot ItemSlot, bool bAllowRemoteActivation = true);
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+		void GetActiveAbilitiesWithItemSlot(FRPGItemSlot ItemSlot, TArray<URPGGameplayAbility*>& ActiveAbilities);
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+		bool ActivateAbilitiesWithTags(FGameplayTagContainer AbilityTags, bool bAllowRemoteActivation = true);
+	UFUNCTION(BlueprintCallable, Category = "Abilities")
+		bool GetCooldownRemainingForTag(FGameplayTagContainer CooldownTags, float& TimeRemaining, float& CooldownDuration);
 
 	bool SetupDefaultAttributes();
+	void OnItemSlotChanged(FRPGItemSlot ItemSlot, URPGItem* Item);
+	void RefreshSlottedGameplayAbilities();
+	void AddStartupGameplayAbilities();
+	void RemoveStartupGameplayAbilities();
+	void AddSlottedGameplayAbilities();
+	void FillSlottedAbilitySpecs(TMap<FRPGItemSlot, FGameplayAbilitySpec>& SlottedAbilitySpecs);
+	void RemoveSlottedGameplayAbilities(bool bRemoveAll);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Abilities)
+		URPGWeaponItem* DefaultAttackStarter;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Abilities)
+		FRPGItemSlot DefaultWeaponSlot;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Abilities)
+		TArray<TSubclassOf<URPGGameplayAbility>> GameplayAbilities;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Abilities)
+		TMap<FRPGItemSlot, TSubclassOf<URPGGameplayAbility>> DefaultStarterSlottedAbilities;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Abilities)
+		TArray<TSubclassOf<UGameplayEffect>> PassiveGameplayEffects;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Inventory)
+		TMap<FRPGItemSlot, FGameplayAbilitySpecHandle> SlottedAbilities;
+	UPROPERTY()
+		TScriptInterface<IPlayerInventoryInterface> InventorySource;
+	UPROPERTY()
+		URPGAbilitySystemComponent* AbilitySystemComponent;
+	UPROPERTY()
+		URPGAttributeSet* AttributeSet;
+	UPROPERTY()
+		bool bAbilitiesInitialized;
+
+	FDelegateHandle InventoryUpdateHandle;
+	FDelegateHandle InventoryLoadedHandle;
+	friend URPGAttributeSet;
+
+protected:
+	////////////////////////
+	// EVENT HANDLERS
+	////////////////////////
 
 	virtual void HandleHitReactDuringAnimation();
-
 	UFUNCTION(BlueprintImplementableEvent)
 		void HandleMaterialHitFlicker();
-
 	UFUNCTION()
 		virtual void HandleDamage(float DamageAmount, const FHitResult& HitInfo, const struct FGameplayTagContainer& DamageTags, ARPGCharacterBase* InstigatorCharacter, AActor* DamageCauser);
 	UFUNCTION()
@@ -100,59 +138,26 @@ private:
 
 	bool WasHitFromFront(const FVector& ImpactPoint);
 
+	bool IsPlayingHighPriorityMontage();
+	void PlayHighPriorityMontage(UAnimMontage* InMontage, FName StartSectionName);
+
 protected:
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Attack)
-		int32 AttackDelayCount;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Attack)
-		float AttackDelayTime;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Attack)
-		FName MeleeStartSection;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Health)
-		bool bIsProtectedByShield;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Health)
-		bool bInvincible;
 
 	UPROPERTY(EditAnywhere, Replicated, Category = Abilities)
 		int32 CharacterLevel;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Abilities)
-		TSubclassOf<UGameplayEffect> DefaultAttributes;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Abilities)
-		URPGItem* DefaultAttackStarter;
-
-	UPROPERTY(BlueprintReadOnly)
-		UInventoryComponent* InventoryComponent;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Animation)
 		FCharacterAnimationStruct Animations;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Abilities)
-		FRPGItemSlot DefaultWeaponSlot;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UDecalComponent* IndicatorDecal;
+	UPROPERTY(BlueprintReadOnly)
+		TArray<UMaterialInstanceDynamic*> DynamicMeshMaterials;
+	UPROPERTY(BlueprintReadOnly)
+		AWeaponActorBase* CurrentWeaponActor;
 
 private:
 
 	UAnimMontage* HighPriorityMontage;	
 	bool bCharacterCanMove;
-
-	UPROPERTY()
-		URPGAbilitySystemComponent* AbilitySystemComponent;
-	
-	UPROPERTY()
-		URPGAttributeSet* AttributeSet;
-
-	UPROPERTY()
-		bool bAbilitiesInitialized;
-
-	friend URPGAttributeSet;
 
 public:
 	FORCEINLINE virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override { return Cast<UAbilitySystemComponent>(AbilitySystemComponent); }
@@ -162,25 +167,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
 		void SetCharacterCanMove(bool val) { bCharacterCanMove = val; }
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
-		int32 GetAttackDelayCount() const { return AttackDelayCount; }
+		TArray<UMaterialInstanceDynamic*> GetDynamicMeshMaterials() const { return DynamicMeshMaterials; }
 	UFUNCTION(BlueprintCallable, Category = "Abilities")
-		void SetAttackDelayCount(int32 val) { AttackDelayCount = val; }
-	UFUNCTION(BlueprintCallable, Category = "Abilities")
-		float GetAttackDelayTime() const { return AttackDelayTime; }
-	UFUNCTION(BlueprintCallable, Category = "Abilities")
-		void SetAttackDelayTime(float val) { AttackDelayTime = val; }
-	UFUNCTION(BlueprintCallable, Category = "Abilities")
-		FName GetMeleeStartSection() const { return MeleeStartSection; }
-	UFUNCTION(BlueprintCallable, Category = "Abilities")
-		void SetMeleeStartSection(FName val) { MeleeStartSection = val; }
-	UFUNCTION(BlueprintCallable, Category = "Abilities")
-		bool IsProtectedByShield() const { return bIsProtectedByShield; }
-	UFUNCTION(BlueprintCallable, Category = "Abilities")
-		void SetIsProtectedByShield(bool val) { bIsProtectedByShield = val; }
-	UFUNCTION(BlueprintCallable, Category = "Abilities")
-		bool IsInvincible() const { return bInvincible; }
-	UFUNCTION(BlueprintCallable, Category = "Abilities")
-		void SetIsInvincible(bool val) { bInvincible = val; }
+		void SetDynamicMeshMaterials(TArray<UMaterialInstanceDynamic*> val) { DynamicMeshMaterials = val; }
 	UFUNCTION(BlueprintCallable)
 		virtual float GetHealth() const;
 	UFUNCTION(BlueprintCallable)
@@ -216,6 +205,4 @@ public:
 
 	bool OnDialogueEvent_Implementation(UDlgContext* Context, FName EventName) override { return false; }
 	bool CheckCondition_Implementation(const UDlgContext* Context, FName ConditionName) const override { return false; }
-
-	UInventoryComponent* GetInventoryComponent() { return InventoryComponent; }
 };

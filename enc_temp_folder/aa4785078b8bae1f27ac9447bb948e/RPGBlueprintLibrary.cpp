@@ -115,11 +115,6 @@ UQuestManager* URPGBlueprintLibrary::GetQuestManager()
 	return nullptr;
 }
 
-FGameplayTag URPGBlueprintLibrary::GetStealthTag()
-{
-	return FGameplayTag::RequestGameplayTag(FName("Combat.State.Invisible"));
-}
-
 ARPGPlayerControllerBase* URPGBlueprintLibrary::GetFirstPlayerController()
 {
 	TArray<APlayerController*> Cons;

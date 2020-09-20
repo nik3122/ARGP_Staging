@@ -26,6 +26,7 @@ ARPGPlayerControllerBase::ARPGPlayerControllerBase()
 	DefaultClickTraceChannel = ECC_WorldDynamic;
 
 	QuestManager = CreateDefaultSubobject<UQuestManager>(TEXT("QuestManager"));
+	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 }
 
 void ARPGPlayerControllerBase::PlayerTick(float DeltaTime)
@@ -70,7 +71,7 @@ void ARPGPlayerControllerBase::OnPossess(APawn* InPawn)
 	Super::OnPossess(InPawn);
 	Protagonist = Cast<APlayerCharacter>(InPawn);
 	if (Protagonist) {
-		Protagonist->GetInventoryComponent()->OnGoldChanged.AddDynamic(this, &ARPGPlayerControllerBase::HandleGoldChanged);
+		InventoryComponent->OnGoldChanged.AddDynamic(this, &ARPGPlayerControllerBase::HandleGoldChanged);
 		Protagonist->GetAttributeSet()->OnDamaged.AddDynamic(this, &ARPGPlayerControllerBase::HandleDamage);
 		Protagonist->GetAttributeSet()->OnManaChanged.AddDynamic(this, &ARPGPlayerControllerBase::HandleManaChanged);
 		Protagonist->GetAttributeSet()->OnHealthChanged.AddDynamic(this, &ARPGPlayerControllerBase::HandleHealthChanged);
@@ -303,7 +304,7 @@ bool ARPGPlayerControllerBase::InRangeOfInteraction()
 		}
 		break;
 	case EProtagonistAffiliation::ENEMY:
-		if( DistanceToProtagonist < Protagonist->GetInventoryComponent()->GetCurrentWeapon()->GetRange()) {
+		if( DistanceToProtagonist < Protagonist->GetCurrentWeaponActor()->GetRange()) {
 			return true;
 		}
 		break;

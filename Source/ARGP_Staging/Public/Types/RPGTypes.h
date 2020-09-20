@@ -25,7 +25,8 @@ enum class EItemTypes : uint8 {
 
 UENUM(BlueprintType)
 enum class ECombatHotkeys : uint8 {
-	DEFAULT_ATTACK UMETA(DisplayName = "Default Attack")
+	DEFAULT_ATTACK UMETA(DisplayName = "Default Attack"),
+	ABILITY_1 UMETA(DisplayName = "Ability 1")
 };
 
 USTRUCT(BlueprintType)

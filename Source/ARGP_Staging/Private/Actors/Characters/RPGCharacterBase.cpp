@@ -24,7 +24,6 @@ ARPGCharacterBase::ARPGCharacterBase()
 	AbilitySystemComponent = CreateDefaultSubobject<URPGAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
 
-	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 	SetAttributeSet(CreateDefaultSubobject<URPGAttributeSet>(TEXT("AttributeSet")));
 
 	IndicatorDecal = CreateDefaultSubobject<UDecalComponent>(TEXT("IndicatorDecal"));
@@ -64,20 +63,26 @@ void ARPGCharacterBase::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
+	InventorySource = NewController;
+
+	if (InventorySource)
+	{
+		InventoryUpdateHandle = InventorySource->GetSlottedItemChangedDelegate().AddUObject(this, &ARPGCharacterBase::OnItemSlotChanged);
+		InventoryLoadedHandle = InventorySource->GetInventoryLoadedDelegate().AddUObject(this, &ARPGCharacterBase::RefreshSlottedGameplayAbilities);
+	}
+
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+		AddStartupGameplayAbilities();
+
 		if (DefaultAttackStarter) {
-			GiveAbilityAndAddToInventory(ECombatHotkeys::DEFAULT_ATTACK, DefaultAttackStarter->GrantedAbility);
-			URPGWeaponItem* WeaponItem = Cast<URPGWeaponItem>(DefaultAttackStarter);
-			if (WeaponItem) {
-				FTransform TempTrans = FTransform();
-				AWeaponActorBase* TempWeapon = URPGBlueprintLibrary::SpawnWeaponActor(WeaponItem->WeaponActor, TempTrans, ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn, this, WeaponItem, DefaultWeaponSlot, this);
-				if (TempWeapon) {
-					TempWeapon->SetInstigator(this);
-					TempWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, "WeaponHandMount_rSocket");
-					InventoryComponent->SetCurrentWeapon(TempWeapon);
-				}
+			FTransform TempTrans = FTransform();
+			AWeaponActorBase* TempWeapon = URPGBlueprintLibrary::SpawnWeaponActor(DefaultAttackStarter->WeaponActor, TempTrans, ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn, this, DefaultAttackStarter, DefaultWeaponSlot, this);
+			if (TempWeapon) {
+				TempWeapon->SetInstigator(this);
+				TempWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, "WeaponHandMount_rSocket");
+				SetCurrentWeaponActor(TempWeapon);
 			}
 		}
 	}
@@ -86,7 +91,15 @@ void ARPGCharacterBase::PossessedBy(AController* NewController)
 
 void ARPGCharacterBase::UnPossessed()
 {
+	if (InventorySource && InventoryUpdateHandle.IsValid())
+	{
+		InventorySource->GetSlottedItemChangedDelegate().Remove(InventoryUpdateHandle);
+		InventoryUpdateHandle.Reset();
 
+		InventorySource->GetInventoryLoadedDelegate().Remove(InventoryLoadedHandle);
+		InventoryLoadedHandle.Reset();
+	}
+	InventorySource = nullptr;
 }
 
 void ARPGCharacterBase::OnRep_Controller()
@@ -114,21 +127,6 @@ bool ARPGCharacterBase::SetCharacterLevel(int32 NewLevel)
 		return true;
 	}
 	return false;
-}
-
-void ARPGCharacterBase::GiveAbilityAndAddToInventory(ECombatHotkeys InHotkey, TSubclassOf<URPGGameplayAbility> AbilityClass)
-{
-	if (AbilitySystemComponent) {
-		AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilityClass));
-		InventoryComponent->AddAbilityToCombatMap(ECombatHotkeys::DEFAULT_ATTACK, AbilityClass);
-	}
-}
-
-void ARPGCharacterBase::ActivateAbilityByClass(TSubclassOf<URPGGameplayAbility> AbilityClass)
-{
-	if (AbilitySystemComponent) {
-		AbilitySystemComponent->TryActivateAbilityByClass(AbilityClass, false);
-	}
 }
 
 void ARPGCharacterBase::GetActiveAbilitiesWithTags(FGameplayTagContainer AbilityTags, TArray<URPGGameplayAbility*>& ActiveAbilities)
@@ -163,7 +161,7 @@ bool ARPGCharacterBase::WasHitFromFront(const FVector& ImpactPoint)
 	{
 		return false;
 	
-	}
+	}  
 	return true;
 }
 
@@ -182,9 +180,7 @@ void ARPGCharacterBase::PlayHighPriorityMontage(UAnimMontage* InMontage, FName S
 
 void ARPGCharacterBase::DelayedDestroy()
 {
-	if (InventoryComponent && InventoryComponent->GetCurrentWeapon()) {
-		GetWorld()->DestroyActor(InventoryComponent->GetCurrentWeapon());
-	}
+	GetWorld()->DestroyActor(CurrentWeaponActor);
 	GetWorld()->DestroyActor(this);
 }
 
@@ -221,22 +217,237 @@ bool ARPGCharacterBase::SetupDefaultAttributes()
 	{
 		return false;
 	}
+	return false;
+}
 
-	if (!DefaultAttributes)
+void ARPGCharacterBase::OnItemSlotChanged(FRPGItemSlot ItemSlot, URPGItem* Item)
+{
+	RefreshSlottedGameplayAbilities();
+}
+
+void ARPGCharacterBase::RefreshSlottedGameplayAbilities()
+{
+	if (bAbilitiesInitialized)
 	{
-		return false;
+		RemoveSlottedGameplayAbilities(false);
+		AddSlottedGameplayAbilities();
+	}
+}
+
+void ARPGCharacterBase::AddStartupGameplayAbilities()
+{
+	check(AbilitySystemComponent);
+
+	if (GetLocalRole() == ROLE_Authority && !bAbilitiesInitialized)
+	{
+		for (TSubclassOf<URPGGameplayAbility>& StartupAbility : GameplayAbilities)
+		{
+			AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(StartupAbility, GetCharacterLevel(), INDEX_NONE, this));
+		}
+
+		for (TSubclassOf<UGameplayEffect>& GameplayEffect : PassiveGameplayEffects)
+		{
+			FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
+			EffectContext.AddSourceObject(this);
+
+			FGameplayEffectSpecHandle NewHandle = AbilitySystemComponent->MakeOutgoingSpec(GameplayEffect, GetCharacterLevel(), EffectContext);
+			if (NewHandle.IsValid())
+			{
+				FActiveGameplayEffectHandle ActiveGEHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToTarget(*NewHandle.Data.Get(), AbilitySystemComponent);
+			}
+		}
+
+		AddSlottedGameplayAbilities();
+
+		bAbilitiesInitialized = true;
+	}
+}
+
+bool ARPGCharacterBase::ActivateAbilitiesWithItemSlot(FRPGItemSlot ItemSlot, bool bAllowRemoteActivation)
+{
+	FGameplayAbilitySpecHandle* FoundHandle = SlottedAbilities.Find(ItemSlot);
+
+	if (FoundHandle && AbilitySystemComponent)
+	{
+		return AbilitySystemComponent->TryActivateAbility(*FoundHandle, bAllowRemoteActivation);
 	}
 
-	FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
-	EffectContext.AddSourceObject(this);
+	return false;
+}
 
-	FGameplayEffectSpecHandle NewHandle = AbilitySystemComponent->MakeOutgoingSpec(DefaultAttributes, 1.0f, EffectContext);
-	if (NewHandle.IsValid())
+void ARPGCharacterBase::GetActiveAbilitiesWithItemSlot(FRPGItemSlot ItemSlot, TArray<URPGGameplayAbility*>& ActiveAbilities)
+{
+	FGameplayAbilitySpecHandle* FoundHandle = SlottedAbilities.Find(ItemSlot);
+
+	if (FoundHandle && AbilitySystemComponent)
 	{
-		FActiveGameplayEffectHandle ActiveGEHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToTarget(*NewHandle.Data.Get(), AbilitySystemComponent);
-		return true;
+		FGameplayAbilitySpec* FoundSpec = AbilitySystemComponent->FindAbilitySpecFromHandle(*FoundHandle);
+
+		if (FoundSpec)
+		{
+			TArray<UGameplayAbility*> AbilityInstances = FoundSpec->GetAbilityInstances();
+
+			for (UGameplayAbility* ActiveAbility : AbilityInstances)
+			{
+				ActiveAbilities.Add(Cast<URPGGameplayAbility>(ActiveAbility));
+			}
+		}
+	}
+}
+
+bool ARPGCharacterBase::ActivateAbilitiesWithTags(FGameplayTagContainer AbilityTags, bool bAllowRemoteActivation)
+{
+	if (AbilitySystemComponent)
+	{
+		return AbilitySystemComponent->TryActivateAbilitiesByTag(AbilityTags, bAllowRemoteActivation);
+	}
+
+	return false;
+}
+
+bool ARPGCharacterBase::GetCooldownRemainingForTag(FGameplayTagContainer CooldownTags, float& TimeRemaining, float& CooldownDuration)
+{
+	if (AbilitySystemComponent && CooldownTags.Num() > 0)
+	{
+		TimeRemaining = 0.f;
+		CooldownDuration = 0.f;
+
+		FGameplayEffectQuery const Query = FGameplayEffectQuery::MakeQuery_MatchAnyOwningTags(CooldownTags);
+		TArray< TPair<float, float> > DurationAndTimeRemaining = AbilitySystemComponent->GetActiveEffectsTimeRemainingAndDuration(Query);
+		if (DurationAndTimeRemaining.Num() > 0)
+		{
+			int32 BestIdx = 0;
+			float LongestTime = DurationAndTimeRemaining[0].Key;
+			for (int32 Idx = 1; Idx < DurationAndTimeRemaining.Num(); ++Idx)
+			{
+				if (DurationAndTimeRemaining[Idx].Key > LongestTime)
+				{
+					LongestTime = DurationAndTimeRemaining[Idx].Key;
+					BestIdx = Idx;
+				}
+			}
+
+			TimeRemaining = DurationAndTimeRemaining[BestIdx].Key;
+			CooldownDuration = DurationAndTimeRemaining[BestIdx].Value;
+
+			return true;
+		}
 	}
 	return false;
+}
+
+void ARPGCharacterBase::RemoveStartupGameplayAbilities()
+{
+	check(AbilitySystemComponent);
+
+	if (GetLocalRole() == ROLE_Authority && bAbilitiesInitialized)
+	{
+		TArray<FGameplayAbilitySpecHandle> AbilitiesToRemove;
+		for (const FGameplayAbilitySpec& Spec : AbilitySystemComponent->GetActivatableAbilities())
+		{
+			if ((Spec.SourceObject == this) && GameplayAbilities.Contains(Spec.Ability->GetClass()))
+			{
+				AbilitiesToRemove.Add(Spec.Handle);
+			}
+		}
+
+		for (int32 i = 0; i < AbilitiesToRemove.Num(); i++)
+		{
+			AbilitySystemComponent->ClearAbility(AbilitiesToRemove[i]);
+		}
+
+		FGameplayEffectQuery Query;
+		Query.EffectSource = this;
+		AbilitySystemComponent->RemoveActiveEffects(Query);
+
+		RemoveSlottedGameplayAbilities(true);
+
+		bAbilitiesInitialized = false;
+	}
+}
+
+void ARPGCharacterBase::AddSlottedGameplayAbilities()
+{
+	TMap<FRPGItemSlot, FGameplayAbilitySpec> SlottedAbilitySpecs;
+	FillSlottedAbilitySpecs(SlottedAbilitySpecs);
+
+	for (const TPair<FRPGItemSlot, FGameplayAbilitySpec>& SpecPair : SlottedAbilitySpecs)
+	{
+		FGameplayAbilitySpecHandle& SpecHandle = SlottedAbilities.FindOrAdd(SpecPair.Key);
+
+		if (!SpecHandle.IsValid())
+		{
+			SpecHandle = AbilitySystemComponent->GiveAbility(SpecPair.Value);
+		}
+	}
+}
+
+void ARPGCharacterBase::FillSlottedAbilitySpecs(TMap<FRPGItemSlot, FGameplayAbilitySpec>& SlottedAbilitySpecs)
+{	
+	for (const TPair<FRPGItemSlot, TSubclassOf<URPGGameplayAbility>>& DefaultPair : DefaultStarterSlottedAbilities)
+	{
+		if (DefaultPair.Value.Get())
+		{
+			SlottedAbilitySpecs.Add(DefaultPair.Key, FGameplayAbilitySpec(DefaultPair.Value, GetCharacterLevel(), INDEX_NONE, this));
+		}
+	}
+
+	if (InventorySource)
+	{
+		const TMap<FRPGItemSlot, URPGItem*>& SlottedItemMap = InventorySource->GetSlottedItemMap();
+
+		for (const TPair<FRPGItemSlot, URPGItem*>& ItemPair : SlottedItemMap)
+		{
+			URPGItem* SlottedItem = ItemPair.Value;
+			int32 AbilityLevel = GetCharacterLevel();
+
+			if (SlottedItem && SlottedItem->ItemType.GetName() == FName(TEXT("Weapon")))
+			{
+				AbilityLevel = SlottedItem->AbilityLevel;
+			}
+
+			if (SlottedItem && SlottedItem->GrantedAbility)
+			{
+				SlottedAbilitySpecs.Add(ItemPair.Key, FGameplayAbilitySpec(SlottedItem->GrantedAbility, AbilityLevel, INDEX_NONE, SlottedItem));
+			}
+		}
+	}
+
+}
+
+void ARPGCharacterBase::RemoveSlottedGameplayAbilities(bool bRemoveAll)
+{
+	TMap<FRPGItemSlot, FGameplayAbilitySpec> SlottedAbilitySpecs;
+
+	if (!bRemoveAll)
+	{
+		FillSlottedAbilitySpecs(SlottedAbilitySpecs);
+	}
+
+	for (TPair<FRPGItemSlot, FGameplayAbilitySpecHandle>& ExistingPair : SlottedAbilities)
+	{
+		FGameplayAbilitySpec* FoundSpec = AbilitySystemComponent->FindAbilitySpecFromHandle(ExistingPair.Value);
+		bool bShouldRemove = bRemoveAll || !FoundSpec;
+
+		if (!bShouldRemove)
+		{
+			FGameplayAbilitySpec* DesiredSpec = SlottedAbilitySpecs.Find(ExistingPair.Key);
+
+			if (!DesiredSpec || DesiredSpec->Ability != FoundSpec->Ability || DesiredSpec->SourceObject != FoundSpec->SourceObject)
+			{
+				bShouldRemove = true;
+			}
+		}
+
+		if (bShouldRemove)
+		{
+			if (FoundSpec)
+			{
+				AbilitySystemComponent->ClearAbility(ExistingPair.Value);
+			}
+			ExistingPair.Value = FGameplayAbilitySpecHandle();
+		}
+	}
 }
 
 void ARPGCharacterBase::HandleHitReactDuringAnimation()

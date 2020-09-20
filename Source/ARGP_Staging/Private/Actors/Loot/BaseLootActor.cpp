@@ -29,7 +29,12 @@ void ABaseLootActor::SetLootLevelAndType(float InGoldToGive, bool bOnlyGold)
 void ABaseLootActor::OnInteract(ARPGCharacterBase* PlayerCharacter)
 {
 	if (PlayerCharacter) {
-		UInventoryComponent* FoundInvComp = PlayerCharacter->GetInventoryComponent();
+		ARPGPlayerControllerBase* CurrCon = URPGBlueprintLibrary::GetFirstPlayerController();
+		if (!CurrCon) {
+			return;
+		}
+
+		UInventoryComponent* FoundInvComp = CurrCon->GetInventoryComponent();
 		if (FoundInvComp) {
 			GiveLootToInventory(FoundInvComp);
 		}
